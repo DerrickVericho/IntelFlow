@@ -1,9 +1,12 @@
 # Backend Rules
 
-- Read `docs/API.md` before adding or changing a Sectors API request.
+- Read `docs/API.md` and `docs/SCHEMA.md` before adding or changing a Sectors
+  API request or response model.
 - Keep all Sectors API calls server-side and use `SECTORS_API_KEY` only from
   environment variables.
 - Check the cache before calling paid endpoints.
+- Cache complete raw Sectors JSON in Redis; keep provider validation, domain
+  mapping, and scoring outside the cache implementation.
 - Do not automatically retry 400, 404, or 429 responses.
 - Request only required Company Report sections.
 - Keep raw API retrieval, transformation, scoring, and response serialization
@@ -20,4 +23,3 @@
   exceptions with enough context to debug. Never log API keys, credentials, or
   sensitive response content.
 - LLM or web-research output must not modify deterministic numeric scores.
-
