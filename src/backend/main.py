@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 
+from .cache import create_redis_client
+from .config import get_settings
 from .logger import configure_logging, reset_request_id, set_request_id
 from .sectors.exceptions import (
     SectorsAuthenticationError,
@@ -24,6 +28,33 @@ from .sectors.exceptions import (
 logger = logging.getLogger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Own shared backend dependencies for the application process."""
+
+    settings = get_settings()
+    redis_client = create_redis_client(settings)
+
+    try:
+        await redis_client.ping()
+    except RedisError as exc:
+        await redis_client.aclose()
+        logger.exception("Redis startup check failed")
+        raise RuntimeError(
+            "Redis is required. Start it with `docker compose up -d redis`."
+        ) from exc
+
+    application.state.settings = settings
+    application.state.redis = redis_client
+    logger.info("Redis connection ready")
+
+    try:
+        yield
+    finally:
+        await redis_client.aclose()
+        logger.info("Redis connection closed")
+
+
 def create_app() -> FastAPI:
     """Create and configure the IntelFlow API application."""
 
@@ -33,6 +64,7 @@ def create_app() -> FastAPI:
         title="IntelFlow API",
         description="Flow-first market intelligence for IDX stocks.",
         version="0.1.0",
+        lifespan=lifespan,
     )
 
     @application.middleware("http")

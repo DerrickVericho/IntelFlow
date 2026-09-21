@@ -9,6 +9,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "fastapi>=0.141.1",
     "pandas>=3.0.6",
+    "redis>=8.1.0",
     "requests>=2.34.2",
     "uvicorn[standard]>=0.53.0",
 ]
