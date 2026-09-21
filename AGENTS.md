@@ -6,8 +6,9 @@ fundamental context for a selected ticker.
 
 ## Living documentation
 
-- Read `docs/PRD.md`, `docs/SCORING.md`, and `docs/API.md` before changing
-  product behavior, scoring, or Sectors API integration.
+- Read `docs/PRD.md`, `docs/SCORING.md`, `docs/API.md`, and `docs/SCHEMA.md`
+  before changing product behavior, scoring, Sectors API integration, or data
+  models.
 - When a product, scoring, API, architecture, or UI decision is changed through
   the current chat, update the relevant document in `docs/` in the same task.
 - These documents are working drafts. Do not treat them as immutable or more
