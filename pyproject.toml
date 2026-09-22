@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "altair>=6.3.0",
+    "black>=26.5.1",
     "dotenv>=0.9.9",
     "fastapi>=0.141.1",
     "pandas>=3.0.6",
@@ -15,6 +16,22 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "httpx2>=2.13.0",
+backend = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.141.1",
+    "pydantic>=2.13.5",
+    "redis>=8.1.0",
+    "requests>=2.34.2",
+    "tzdata>=2025.2",
+    "uvicorn>=0.53.0",
 ]
+dev = [
+    "httpx>=0.28.1",
+    "httpx2>=2.13.0",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src/backend/tests"]
+pythonpath = ["."]
+addopts = "--basetemp=.pytest-tmp"

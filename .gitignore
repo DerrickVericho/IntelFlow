@@ -1,5 +1,7 @@
 # Python-generated files
 __pycache__/
+.pytest_cache/
+.pytest-tmp/
 *.py[oc]
 build/
 dist/
@@ -11,3 +13,7 @@ wheels/
 .env
 node_modules/
 output*/
+
+# Application logs
+logs/
+*.log

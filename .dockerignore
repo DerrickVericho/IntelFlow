@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+logs
+**/*.log
+**/__pycache__
+**/.pytest_cache
+node_modules
+output-schema
+api_testing.ipynb
+docs/assets
+src/backend/tests
