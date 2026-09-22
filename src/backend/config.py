@@ -9,9 +9,7 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
-
-class ApplicationConfigurationError(RuntimeError):
-    """Raised when backend environment configuration is invalid."""
+from .exceptions.configuration import ApplicationConfigurationError
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,9 +42,7 @@ class Settings:
                 "REDIS_URL must use redis://, rediss://, or unix://."
             )
 
-        redis_key_prefix = os.getenv(
-            "REDIS_KEY_PREFIX", "intelflow:sectors:v1"
-        ).strip()
+        redis_key_prefix = os.getenv("REDIS_KEY_PREFIX", "intelflow:sectors:v1").strip()
         if not redis_key_prefix or any(char.isspace() for char in redis_key_prefix):
             raise ApplicationConfigurationError(
                 "REDIS_KEY_PREFIX must be non-empty and contain no whitespace."
@@ -65,13 +61,13 @@ class Settings:
                 "REDIS_HEALTH_CHECK_INTERVAL_SECONDS", 30
             ),
             cache_ttl_market_current_seconds=_positive_int(
-                "CACHE_TTL_MARKET_CURRENT_SECONDS", 3_600
+                "CACHE_TTL_MARKET_CURRENT_SECONDS", 21_600
             ),
             cache_ttl_market_historical_seconds=_positive_int(
                 "CACHE_TTL_MARKET_HISTORICAL_SECONDS", 2_592_000
             ),
             cache_ttl_shareholders_seconds=_positive_int(
-                "CACHE_TTL_SHAREHOLDERS_SECONDS", 259_200
+                "CACHE_TTL_SHAREHOLDERS_SECONDS", 604_800
             ),
             cache_ttl_free_float_seconds=_positive_int(
                 "CACHE_TTL_FREE_FLOAT_SECONDS", 604_800
@@ -80,10 +76,10 @@ class Settings:
                 "CACHE_TTL_COMPANY_DYNAMIC_SECONDS", 43_200
             ),
             cache_ttl_company_static_seconds=_positive_int(
-                "CACHE_TTL_COMPANY_STATIC_SECONDS", 604_800
+                "CACHE_TTL_COMPANY_STATIC_SECONDS", 1_209_600
             ),
             cache_ttl_revenue_segments_seconds=_positive_int(
-                "CACHE_TTL_REVENUE_SEGMENTS_SECONDS", 604_800
+                "CACHE_TTL_REVENUE_SEGMENTS_SECONDS", 2_592_000
             ),
         )
 
@@ -126,4 +122,3 @@ def get_settings() -> Settings:
     """Return the process-wide immutable settings instance."""
 
     return Settings.from_env()
-
