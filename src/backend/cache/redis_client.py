@@ -18,4 +18,3 @@ def create_redis_client(settings: Settings) -> Redis:
         socket_timeout=settings.redis_socket_timeout_seconds,
         health_check_interval=settings.redis_health_check_interval_seconds,
     )
-
