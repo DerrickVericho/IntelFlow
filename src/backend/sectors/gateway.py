@@ -1,65 +1,67 @@
-"""Contract for retrieving data from the Sectors API.
-
-Response schemas intentionally remain untyped until representative API output
-has been reviewed and agreed on.
-"""
+"""Async typed application boundary; SectorsClient remains raw transport."""
 
 from __future__ import annotations
 
-from typing import Any, Protocol, Sequence
+from typing import Protocol, Sequence
+from .cached import Retrieved
+from ..schemas.transactions import DailyTransaction
+from ..schemas.screeners import FreeFloat
+from ..schemas.brokers import BrokerActivityList, TopBrokerList, ForeignFlowList
+from ..schemas.company_reports import CompanyReportList
+from ..schemas.detail_reports import ShareholderList, RevenueSegmentList
 
 
 class SectorsGateway(Protocol):
     """Operations from Sectors API that IntelFlow currently depends on."""
 
-    def get_free_float(
+    async def get_free_float(
         self,
         *,
         sector: str | None = None,
         sub_sector: str | None = None,
         industry: str | None = None,
         sub_industry: str | None = None,
-    ) -> Any: ...
+    ) -> Retrieved[list[FreeFloat]]: ...
 
-    def get_daily(
+    async def get_daily(
         self,
         symbol: str,
         *,
         start: str | None = None,
         end: str | None = None,
-    ) -> Any: ...
+    ) -> Retrieved[list[DailyTransaction]]: ...
 
-    def get_revenue_segments(
+    async def get_revenue_segments(
         self,
         symbol: str,
         *,
         financial_year: int | None = None,
-    ) -> Any: ...
+    ) -> Retrieved[RevenueSegmentList]: ...
 
-    def get_company_report(
+    async def get_company_report(
         self,
         symbol: str,
         *,
         sections: Sequence[str],
-    ) -> Any: ...
+    ) -> Retrieved[CompanyReportList]: ...
 
-    def get_shareholder_composition(
+    async def get_shareholder_composition(
         self,
         symbol: str,
         *,
         year: int | None = None,
-    ) -> Any: ...
+    ) -> Retrieved[ShareholderList]: ...
 
-    def get_broker_summary(
+    async def get_broker_summary(
         self,
         symbol: str,
         *,
         start: str | None = None,
         end: str | None = None,
         broker_code: str | None = None,
-    ) -> Any: ...
+    ) -> Retrieved[BrokerActivityList]: ...
 
-    def get_top_brokers(
+    async def get_top_brokers(
         self,
         symbol: str,
         *,
@@ -69,13 +71,12 @@ class SectorsGateway(Protocol):
         origin: str | None = None,
         foreign: bool | None = None,
         n_brokers: int | None = None,
-    ) -> Any: ...
+    ) -> Retrieved[TopBrokerList]: ...
 
-    def get_foreign_flow(
+    async def get_foreign_flow(
         self,
         symbol: str,
         *,
         start: str | None = None,
         end: str | None = None,
-    ) -> Any: ...
-
+    ) -> Retrieved[ForeignFlowList]: ...

@@ -9,7 +9,7 @@ from typing import Any
 
 import requests
 
-from .exceptions import (
+from ..exceptions.sectors import (
     SectorsAuthenticationError,
     SectorsConfigurationError,
     SectorsNotFoundError,
@@ -18,7 +18,6 @@ from .exceptions import (
     SectorsUpstreamError,
     SectorsValidationError,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -278,9 +277,7 @@ class SectorsClient:
                 "Sectors API authentication failed.", **error_kwargs
             )
         if status_code == 404:
-            raise SectorsNotFoundError(
-                "Sectors data was not found.", **error_kwargs
-            )
+            raise SectorsNotFoundError("Sectors data was not found.", **error_kwargs)
         if status_code == 429:
             raise SectorsRateLimitError(
                 "Sectors API rate or credit limit was reached.", **error_kwargs
@@ -288,4 +285,3 @@ class SectorsClient:
         raise SectorsUpstreamError(
             "Sectors API returned an unexpected error.", **error_kwargs
         )
-
