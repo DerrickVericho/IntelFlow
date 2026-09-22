@@ -91,4 +91,3 @@ class TopBrokerList(BaseModel):
     foreign: bool
     top_buyers: list[TopBrokerDetails]
     top_sellers: list[TopBrokerDetails]
-    

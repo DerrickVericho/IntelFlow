@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DailyTransaction(BaseModel):
@@ -10,9 +10,9 @@ class DailyTransaction(BaseModel):
 
     symbol: str
     date: date
-    close: int
+    close: int = Field(ge=0)
     open: int | None = None
     high: int | None = None
     low: int | None = None
-    volume: int
+    volume: int = Field(ge=0)
     market_cap: int

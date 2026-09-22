@@ -6,7 +6,6 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # Currently skipped: future, management, and peers.
 
 
@@ -163,9 +162,9 @@ class CompanyOwnershipDetail(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     major_shareholders: list[MajorShareholderDetail]
-    institutional_transaction_flow: (
-        list[InstitutionalTransactionFlowDetail] | None
-    ) = None
+    institutional_transaction_flow: list[InstitutionalTransactionFlowDetail] | None = (
+        None
+    )
     whale_investors: list[str] | None = None
     conglomerates_group: list[str] | None = None
 
