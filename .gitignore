@@ -17,3 +17,8 @@ output*/
 # Application logs
 logs/
 *.log
+
+# Frontend verification artifacts
+src/frontend/test-results/
+src/frontend/playwright-report/
+coverage/

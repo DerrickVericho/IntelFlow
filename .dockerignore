@@ -11,3 +11,10 @@ output-schema
 api_testing.ipynb
 docs/assets
 src/backend/tests
+src/frontend/dist
+src/frontend/test-results
+src/frontend/playwright-report
+coverage
+**/test-results
+.pytest-tmp
+.pytest_cache
