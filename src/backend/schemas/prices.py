@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from ...domain.models.base import Record
+from ..models.base import Record
 from .common import Envelope
 
 

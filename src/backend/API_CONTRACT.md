@@ -8,7 +8,8 @@ Provider contracts are separately documented in `docs/API.md`.
 ## Endpoints
 
 All requests are GET. Research paths are prefixed with `/api/v1/stocks/{symbol}`.
-Symbols accept lowercase or `.JK`; responses normalize to uppercase without suffix.
+Symbols must contain exactly four letters; lowercase and an optional `.JK` suffix
+are accepted. Responses normalize to uppercase without suffix.
 
 | Path | Input | Output |
 |---|---|---|
@@ -19,7 +20,10 @@ Symbols accept lowercase or `.JK`; responses normalize to uppercase without suff
 | `/shareholders` | Optional `year`, defaults to current Jakarta year | Monthly holdings, category definitions, totals and counts |
 | `/broker-series` | Required `range=1w/1m/3m`; optional comma-separated `brokers` | Default and selected brokers, available codes, daily/cumulative flow series |
 
-Chart ranges are trailing 7/30/90 calendar days inclusive, ending today in Jakarta.
+Market chart ranges are trailing 7/30/90 calendar days inclusive, ending no
+later than the current UTC date. Before 07:00 WIB this is the previous Jakarta
+calendar date. Response `as_of` still comes from the latest observed trading
+date, not from the requested range end. Shareholder years use Jakarta time.
 No endpoint calls a paid source for malformed query input. Home can navigate to
 IntelScore using the user's ticker without an extra search endpoint.
 

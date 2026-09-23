@@ -1,36 +1,24 @@
-"""FastAPI application entry point for IntelFlow."""
+"""FastAPI application assembly and dependency lifespan for IntelFlow."""
 
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
-from time import perf_counter
-from uuid import uuid4
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from redis.exceptions import RedisError
 
-from .cache import create_redis_client
-from .config import get_settings
-from .logger import configure_logging, reset_request_id, set_request_id
 from .api.routes import router
+from .cache import create_redis_client
 from .cache.store import RedisCache
-from .exceptions.cache import CacheUnavailable
-from .exceptions.research import ResearchError
-from .exceptions.sectors import (
-    SectorsAuthenticationError,
-    SectorsConfigurationError,
-    SectorsError,
-    SectorsNotFoundError,
-    SectorsRateLimitError,
-    SectorsUpstreamError,
-    SectorsValidationError,
-)
+from .config import get_settings
+from .exceptions.registry import register_exception_handlers
+from .logger import configure_logging
+from .middleware import RequestLoggingMiddleware
 from .sectors.cached import CachedSectorsGateway
 from .sectors.client import SectorsClient
 from .services.research import ResearchService
@@ -40,11 +28,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    """Own shared backend dependencies for the application process."""
+    """Own Redis and Sectors transport for a single application worker."""
 
     if application.state.injected_service:
         yield
         return
+
     settings = get_settings()
     redis_client = create_redis_client(settings)
 
@@ -75,10 +64,9 @@ async def lifespan(application: FastAPI):
 
 
 def create_app(*, service: ResearchService | None = None) -> FastAPI:
-    """Create and configure the IntelFlow API application."""
+    """Create the API with a single exception registry and request middleware."""
 
     configure_logging()
-
     application = FastAPI(
         title="IntelFlow API",
         description="Flow-first market intelligence for IDX stocks.",
@@ -86,13 +74,16 @@ def create_app(*, service: ResearchService | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.injected_service = service is not None
-    if service:
+    if service is not None:
         application.state.research = service
+
     application.include_router(router)
+    register_exception_handlers(application)
+
     origins = [
-        o.strip()
-        for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
-        if o.strip()
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+        if origin.strip()
     ]
     application.add_middleware(
         CORSMiddleware,
@@ -101,120 +92,13 @@ def create_app(*, service: ResearchService | None = None) -> FastAPI:
         allow_headers=["Content-Type", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
-
-    @application.middleware("http")
-    async def log_request(request: Request, call_next):
-        request_id = str(uuid4())
-        request.state.request_id = request_id
-        token = set_request_id(request_id)
-        started_at = perf_counter()
-        status_code = 500
-
-        try:
-            response = await call_next(request)
-            status_code = response.status_code
-        except Exception:
-            logger.exception(
-                "Unhandled request exception",
-                extra={"method": request.method, "path": request.url.path},
-            )
-            response = JSONResponse(
-                status_code=500,
-                content={
-                    "error": {
-                        "code": "INTERNAL_ERROR",
-                        "message": "An unexpected error occurred.",
-                        "request_id": request_id,
-                    }
-                },
-            )
-        finally:
-            duration_ms = (perf_counter() - started_at) * 1000
-            logger.info(
-                "Request completed",
-                extra={
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status_code": status_code,
-                    "duration_ms": round(duration_ms, 2),
-                },
-            )
-            reset_request_id(token)
-
-        response.headers["X-Request-ID"] = request_id
-        return response
-
-    @application.exception_handler(SectorsError)
-    async def handle_sectors_error(
-        _request: Request,
-        exc: SectorsError,
-    ) -> JSONResponse:
-        status_code, error_code = _map_sectors_error(exc)
-        logger.warning(
-            "Sectors request could not be completed",
-            extra={
-                "error_code": error_code,
-                "upstream_status": exc.status_code,
-            },
-        )
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "error": {
-                    "code": error_code,
-                    "message": str(exc),
-                    "request_id": _request.state.request_id,
-                }
-            },
-        )
-
-    @application.exception_handler(ResearchError)
-    async def research_error(request: Request, exc: ResearchError):
-        return JSONResponse(
-            status_code=exc.status,
-            content={
-                "error": {
-                    "code": exc.code,
-                    "message": exc.message,
-                    "request_id": request.state.request_id,
-                }
-            },
-        )
-
-    @application.exception_handler(CacheUnavailable)
-    async def cache_error(request: Request, exc: CacheUnavailable):
-        logger.error(
-            "Cache unavailable; request stopped",
-            extra={"error_type": type(exc).__name__},
-        )
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": {
-                    "code": "CACHE_UNAVAILABLE",
-                    "message": str(exc),
-                    "request_id": request.state.request_id,
-                }
-            },
-        )
-
-    @application.exception_handler(RequestValidationError)
-    async def validation_error(request: Request, exc: RequestValidationError):
-        return JSONResponse(
-            status_code=422,
-            content={
-                "error": {
-                    "code": "INVALID_REQUEST",
-                    "message": "Invalid query or path parameters; consult /docs.",
-                    "request_id": request.state.request_id,
-                }
-            },
-        )
+    application.add_middleware(RequestLoggingMiddleware)
 
     @application.get("/health", tags=["system"])
     async def health():
         if application.state.injected_service:
             return {"status": "healthy", "dependencies": {"redis": "test-double"}}
+
         try:
             await application.state.redis.ping()
         except RedisError:
@@ -225,25 +109,10 @@ def create_app(*, service: ResearchService | None = None) -> FastAPI:
                     "dependencies": {"redis": "unavailable"},
                 },
             )
+
         return {"status": "healthy", "dependencies": {"redis": "healthy"}}
 
     return application
-
-
-def _map_sectors_error(exc: SectorsError) -> tuple[int, str]:
-    if isinstance(exc, SectorsConfigurationError):
-        return 503, "UPSTREAM_CONFIGURATION_ERROR"
-    if isinstance(exc, SectorsValidationError):
-        return 503, "UPSTREAM_REQUEST_REJECTED"
-    if isinstance(exc, SectorsAuthenticationError):
-        return 503, "UPSTREAM_AUTHENTICATION_ERROR"
-    if isinstance(exc, SectorsNotFoundError):
-        return 404, "DATA_NOT_FOUND"
-    if isinstance(exc, SectorsRateLimitError):
-        return 503, "UPSTREAM_RATE_LIMIT"
-    if isinstance(exc, SectorsUpstreamError):
-        return 503, "UPSTREAM_UNAVAILABLE"
-    return 503, "UPSTREAM_INVALID_RESPONSE"
 
 
 app = create_app()

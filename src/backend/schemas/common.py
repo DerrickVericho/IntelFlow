@@ -3,8 +3,8 @@
 from datetime import date
 from typing import Literal
 
-from ...domain.models.base import Record
-from ...domain.models.common import MissingInput, Source
+from ..models.base import Record
+from ..models.common import MissingInput, Source
 
 
 class Envelope(Record):

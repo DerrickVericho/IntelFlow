@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Protocol, Sequence
 from .cached import Retrieved
-from ..schemas.transactions import DailyTransaction
-from ..schemas.screeners import FreeFloat
-from ..schemas.brokers import BrokerActivityList, TopBrokerList, ForeignFlowList
-from ..schemas.company_reports import CompanyReportList
-from ..schemas.detail_reports import ShareholderList, RevenueSegmentList
+from .schemas.transactions import DailyTransaction
+from .schemas.screeners import FreeFloat
+from .schemas.brokers import BrokerActivityList, TopBrokerList, ForeignFlowList
+from .schemas.company_reports import CompanyReportList
+from .schemas.detail_reports import ShareholderList, RevenueSegmentList
 
 
 class SectorsGateway(Protocol):

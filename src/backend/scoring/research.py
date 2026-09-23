@@ -2,21 +2,21 @@
 
 from datetime import UTC, datetime
 from statistics import mean, median
-from ..domain.models.scoring import Component, Score, Scores
+from ..models.scoring import Component, Score, Scores
 
 VERSION = "draft-v0.2"
 
 
-def clamp(value):
+def clamp(value: float):
     return round(max(0.0, min(100.0, value)), 2)
 
 
-def average(values):
+def average(values: list[float]):
     present = [v for v in values if v is not None]
     return clamp(mean(present)) if present else None
 
 
-def weighted(components, require_all=False):
+def weighted(components: list[Component], require_all=False):
     available = [c for c in components if c.value is not None]
     value = None
     if available and (not require_all or len(available) == len(components)):

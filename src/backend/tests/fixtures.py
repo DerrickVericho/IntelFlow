@@ -19,7 +19,7 @@ class FixtureTransport:
         ]
         self.rows = [
             dict(
-                symbol="DEMO.JK",
+                symbol="TEST.JK",
                 date=d.isoformat(),
                 close=1000 + i,
                 open=1000,
@@ -32,11 +32,11 @@ class FixtureTransport:
         ]
 
     def __getattr__(self, operation):
-        def get(symbol="DEMO", **params):
+        def get(symbol="TEST", **params):
             self.calls[operation] += 1
             if operation in self.failures:
                 raise self.failures[operation]
-            if symbol != "DEMO":
+            if symbol != "TEST":
                 raise SectorsNotFoundError("Fixture ticker not found.")
             return deepcopy(getattr(self, "_" + operation)(**params))
 
@@ -59,7 +59,7 @@ class FixtureTransport:
             )
 
         return dict(
-            symbol="DEMO.JK",
+            symbol="TEST.JK",
             start=start,
             end=end,
             origin="all",
@@ -71,7 +71,7 @@ class FixtureTransport:
 
     def _get_foreign_flow(self, start, end):
         return dict(
-            symbol="DEMO.JK",
+            symbol="TEST.JK",
             start=start,
             end=end,
             data=[
@@ -89,10 +89,10 @@ class FixtureTransport:
 
     def _get_company_report(self, sections):
         overview = dict(
-            industry="Demo",
-            sub_industry="Demo",
-            sector="Demo",
-            sub_sector="Demo",
+            industry="Test",
+            sub_industry="Test",
+            sector="Test",
+            sub_sector="Test",
             market_cap=1000000000,
             market_cap_rank=1,
         )
@@ -148,7 +148,7 @@ class FixtureTransport:
             overview=overview, financials=financials, valuation=valuation
         )
         return dict(
-            symbol="DEMO.JK",
+            symbol="TEST.JK",
             company_name="Synthetic Fixture Company",
             **{s: all_sections[s] for s in sections},
         )
@@ -166,7 +166,7 @@ class FixtureTransport:
             "other",
         )
         return dict(
-            symbol="DEMO.JK",
+            symbol="TEST.JK",
             year=year,
             data=[
                 dict(
@@ -183,7 +183,7 @@ class FixtureTransport:
 
     def _get_broker_summary(self, start, end):
         return dict(
-            symbol="DEMO.JK",
+            symbol="TEST.JK",
             start=start,
             end=end,
             data=[

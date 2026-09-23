@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -243,11 +244,9 @@ class SectorsClient:
 
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
-        normalized = symbol.strip().upper()
-        if normalized.endswith(".JK"):
-            normalized = normalized[:-3]
-        if not normalized or not normalized.isalnum():
-            raise SectorsValidationError("Symbol must contain letters or numbers.")
+        normalized = symbol.strip().upper().removesuffix(".JK")
+        if not re.fullmatch(r"[A-Z]{4}", normalized):
+            raise SectorsValidationError("Symbol must contain four letters.")
         return normalized
 
     @staticmethod

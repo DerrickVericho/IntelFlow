@@ -2,11 +2,11 @@
 
 from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, Request
-from .schemas.brokers import BrokerResponse
-from .schemas.flow import FlowResponse
-from .schemas.prices import PriceResponse
-from .schemas.research import ResearchResponse
-from .schemas.shareholders import ShareholderResponse
+from ..schemas.brokers import BrokerResponse
+from ..schemas.flow import FlowResponse
+from ..schemas.prices import PriceResponse
+from ..schemas.research import ResearchResponse
+from ..schemas.shareholders import ShareholderResponse
 from ..services.research import ResearchService
 
 router = APIRouter(prefix="/api/v1/stocks", tags=["research"])

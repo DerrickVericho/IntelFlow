@@ -2,7 +2,7 @@
 
 from statistics import mean
 
-from ..domain.models.flow import (
+from ..models.flow import (
     BrokerBar,
     BrokerSummary,
     Breadth,
@@ -11,7 +11,7 @@ from ..domain.models.flow import (
     Liquidity,
     LiquidityPoint,
 )
-from ..domain.models.fundamentals import Fundamentals, Metric, MetricGroup, MetricPoint
+from ..models.fundamentals import Fundamentals, Metric, MetricGroup, MetricPoint
 
 
 def broker_evidence(report):

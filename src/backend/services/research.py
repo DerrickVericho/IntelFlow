@@ -5,32 +5,41 @@ import re
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from ..api.schemas.brokers import BrokerPoint, BrokerResponse, BrokerSeries
-from ..api.schemas.flow import FlowResponse
-from ..api.schemas.prices import PricePoint, PriceResponse
-from ..api.schemas.research import ResearchResponse
-from ..api.schemas.shareholders import Category, ShareholderPoint, ShareholderResponse
-from ..domain.models.common import MissingInput, Source
-from ..domain.models.flow import FlowEvidence
-from ..domain.models.research import Company, KeyPoint
-from ..exceptions.research import ResearchError
+from ..exceptions.research import (
+    DataNotFoundError,
+    InvalidBrokersError,
+    InvalidRangeError,
+    InvalidSymbolError,
+    InvalidWindowError,
+    InvalidYearError,
+    ResearchUnavailableError,
+)
 from ..exceptions.sectors import SectorsError, SectorsResponseError
+from ..models.common import MissingInput, Source
+from ..models.flow import FlowEvidence
+from ..models.research import Company, KeyPoint
+from ..schemas.brokers import BrokerPoint, BrokerResponse, BrokerSeries
+from ..schemas.flow import FlowResponse
+from ..schemas.prices import PricePoint, PriceResponse
+from ..schemas.research import ResearchResponse
+from ..schemas.shareholders import Category, ShareholderPoint, ShareholderResponse
+from ..scoring.research import calculate
+from ..sectors.dates import latest_provider_date
 from ..sectors.gateway import SectorsGateway
 from ..sectors.mapper import (
     broker_evidence,
+    fundamentals_evidence,
     foreign_evidence,
     liquidity_evidence,
-    fundamentals_evidence,
 )
-from ..scoring.research import calculate
 
 logger = logging.getLogger(__name__)
 
 
 def normalize_symbol(symbol):
     value = symbol.strip().upper().removesuffix(".JK")
-    if not re.fullmatch(r"[A-Z][A-Z0-9]{1,9}", value):
-        raise ResearchError("INVALID_SYMBOL", "Use an IDX ticker, for example BBCA.")
+    if not re.fullmatch(r"[A-Z]{4}", value):
+        raise InvalidSymbolError("Use a four-letter IDX ticker, for example BBCA.")
     return value
 
 
@@ -46,9 +55,13 @@ def unique_rows(rows):
 
 
 class ResearchService:
-    def __init__(self, gateway: SectorsGateway, today=None):
+    def __init__(self, gateway: SectorsGateway, today=None, utc_today=None):
         self.gateway = gateway
         self.today = today or (lambda: datetime.now(ZoneInfo("Asia/Jakarta")).date())
+        self.utc_today = utc_today or (lambda: datetime.now(UTC).date())
+
+    def _market_end(self):
+        return latest_provider_date(self.today(), self.utc_today())
 
     async def _optional(self, call, key, missing):
         try:
@@ -86,8 +99,8 @@ class ResearchService:
             else "stale" if any(s.is_stale for s in sources) else "complete"
         )
 
-    async def _history(self, symbol):
-        end = self.today()
+    async def _history(self, symbol, *, end=None):
+        end = end or self._market_end()
         result = await self.gateway.get_daily(
             symbol, start=(end - timedelta(days=89)).isoformat(), end=end.isoformat()
         )
@@ -95,18 +108,17 @@ class ResearchService:
             [r for r in result.data if end - timedelta(days=89) <= r.date <= end]
         )
         if not rows:
-            raise ResearchError(
-                "DATA_NOT_FOUND",
-                "No price observations available for this symbol in the supported history.",
-                404,
+            raise DataNotFoundError(
+                "No price observations available for this symbol in the supported history."
             )
         return result, rows
 
     async def flow(self, symbol, window="20d"):
         symbol = normalize_symbol(symbol)
         if window not in ("1d", "5d", "20d"):
-            raise ResearchError("INVALID_WINDOW", "Window must be 1d, 5d, or 20d.")
-        result, history = await self._history(symbol)
+            raise InvalidWindowError("Window must be 1d, 5d, or 20d.")
+        market_end = self._market_end()
+        result, history = await self._history(symbol, end=market_end)
         count = int(window[:-1])
         selected = history[-count:]
         start, end = selected[0].date, selected[-1].date
@@ -135,8 +147,8 @@ class ResearchService:
         foreign = await self._optional(
             self.gateway.get_foreign_flow(
                 symbol,
-                start=(self.today() - timedelta(days=89)).isoformat(),
-                end=self.today().isoformat(),
+                start=(market_end - timedelta(days=89)).isoformat(),
+                end=market_end.isoformat(),
             ),
             "foreign_flow",
             missing,
@@ -318,7 +330,11 @@ class ResearchService:
                 KeyPoint(
                     kind="evidence",
                     title="Foreign investor flow",
-                    text=f"Net IDR {foreign.net_inflow_idr:,} across {len(foreign.series)} observations; {foreign.positive_days} positive-flow days.",
+                    text=(
+                        f"Net IDR {foreign.net_inflow_idr:,} across "
+                        f"{len(foreign.series)} observations; "
+                        f"{foreign.positive_days} positive-flow days."
+                    ),
                     source_keys=["foreign_flow"],
                 )
             )
@@ -340,7 +356,10 @@ class ResearchService:
                     else "unavailable"
                 ),
                 title="Fundamental support",
-                text=f"{scores.research_state}. Financial reporting year: {fundamentals.reporting_period or 'unavailable'}.",
+                text=(
+                    f"{scores.research_state}. Financial reporting year: "
+                    f"{fundamentals.reporting_period or 'unavailable'}."
+                ),
                 source_keys=[s.key for s in sources if s.key.startswith("company_")],
             )
         )
@@ -349,7 +368,10 @@ class ResearchService:
                 KeyPoint(
                     kind="unavailable",
                     title="Incomplete evidence",
-                    text=f"{len(missing)} input or calculation limitations; inspect missing_inputs.",
+                    text=(
+                        f"{len(missing)} input or calculation limitations; "
+                        "inspect missing_inputs."
+                    ),
                     source_keys=[],
                 )
             )
@@ -369,14 +391,14 @@ class ResearchService:
     def _range(self, range_):
         days = {"1w": 7, "1m": 30, "3m": 90}.get(range_)
         if not days:
-            raise ResearchError("INVALID_RANGE", "Range must be 1w, 1m, or 3m.")
-        end = self.today()
+            raise InvalidRangeError("Range must be 1w, 1m, or 3m.")
+        end = self._market_end()
         return end - timedelta(days=days - 1), end
 
     async def prices(self, symbol, range_):
         symbol = normalize_symbol(symbol)
         start, end = self._range(range_)
-        result, history = await self._history(symbol)
+        result, history = await self._history(symbol, end=end)
         rows = [r for r in history if start <= r.date <= end]
         source = self._source(
             "daily", result, as_of=rows[-1].date if rows else None, start=start, end=end
@@ -412,9 +434,7 @@ class ResearchService:
         symbol = normalize_symbol(symbol)
         year = year if year is not None else self.today().year
         if not 2021 <= year <= self.today().year:
-            raise ResearchError(
-                "INVALID_YEAR", "Year must be between 2021 and the current year."
-            )
+            raise InvalidYearError("Year must be between 2021 and the current year.")
         result = await self.gateway.get_shareholder_composition(symbol, year=year)
         rows = unique_rows([r for r in result.data.data if r.date.year == year])
         categories = (
@@ -478,9 +498,7 @@ class ResearchService:
             if len(selected) > 10 or any(
                 not re.fullmatch(r"[A-Z0-9]{2}", c) for c in selected
             ):
-                raise ResearchError(
-                    "INVALID_BROKERS", "Select 1–10 two-character broker codes."
-                )
+                raise InvalidBrokersError("Select 1–10 two-character broker codes.")
         missing, sources, rows = [], [], []
         cursor = start
         while cursor <= end:
@@ -510,9 +528,7 @@ class ResearchService:
                     sources[-1].is_stale = False
             cursor = chunk_end + timedelta(days=1)
         if not sources:
-            raise ResearchError(
-                "UPSTREAM_UNAVAILABLE", "No broker history could be retrieved.", 503
-            )
+            raise ResearchUnavailableError("No broker history could be retrieved.")
         rows = unique_rows(rows)
         available = sorted({b.broker_code for r in rows for b in r.summary})
         totals = {
@@ -558,7 +574,10 @@ class ResearchService:
                 missing.append(
                     MissingInput(
                         key="broker." + code,
-                        reason="Daily gaps; cumulative series cannot be calculated across missing observations",
+                        reason=(
+                            "Daily gaps; cumulative series cannot be calculated "
+                            "across missing observations"
+                        ),
                     )
                 )
             series.append(BrokerSeries(broker_code=code, points=points))

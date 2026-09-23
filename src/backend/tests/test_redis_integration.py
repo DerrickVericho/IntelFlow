@@ -24,14 +24,14 @@ def test_cache_survives_gateway_recreation():
         prefix = "intelflow:test:" + uuid4().hex
         settings = replace(Settings.from_env(), redis_key_prefix=prefix)
         params = {"start": "2026-09-01", "end": TODAY.isoformat()}
-        key = canonical_key(prefix, "get_daily", "DEMO", params)
+        key = canonical_key(prefix, "get_daily", "TEST", params)
         transport = FixtureTransport()
         try:
             await client.ping()
             first = CachedSectorsGateway(transport, RedisCache(client), settings)
-            a = await first.get_daily("DEMO", **params)
+            a = await first.get_daily("TEST", **params)
             second = CachedSectorsGateway(transport, RedisCache(client), settings)
-            b = await second.get_daily("DEMO", **params)
+            b = await second.get_daily("TEST", **params)
             assert a == b
             assert transport.calls["get_daily"] == 1
             assert await client.ttl(key) > 0

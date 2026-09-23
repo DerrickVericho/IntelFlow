@@ -18,6 +18,11 @@
 - Define backend exceptions under `src/backend/exceptions/` by subsystem rather
   than declaring exception classes inside services, cache, configuration, or
   provider transport modules.
+- Derive application exceptions from `AppError`, put each public code and HTTP
+  status on its exception class, and register handlers through the exception
+  registry instead of mapping errors in `main.py`.
+- Keep request logging in `middleware.py`; use console text for development and
+  JSON stdout for production. Do not write or mount backend log files.
 - Implement scoring deterministically according to `docs/SCORING.md`.
 - Return score components, evidence, input dates, and calculation version with
   every analysis response.

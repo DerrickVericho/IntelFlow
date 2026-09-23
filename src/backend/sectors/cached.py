@@ -12,11 +12,12 @@ from pydantic import TypeAdapter, ValidationError
 
 from ..config import Settings
 from ..cache.store import CacheStore
-from ..schemas.transactions import DailyTransaction
-from ..schemas.screeners import FreeFloat
-from ..schemas.brokers import BrokerActivityList, TopBrokerList, ForeignFlowList
-from ..schemas.company_reports import CompanyReportList
-from ..schemas.detail_reports import ShareholderList, RevenueSegmentList
+from .schemas.transactions import DailyTransaction
+from .schemas.screeners import FreeFloat
+from .schemas.brokers import BrokerActivityList, TopBrokerList, ForeignFlowList
+from .schemas.company_reports import CompanyReportList
+from .schemas.detail_reports import ShareholderList, RevenueSegmentList
+from .dates import latest_provider_date
 from ..exceptions.sectors import SectorsResponseError, SectorsValidationError
 
 T = TypeVar("T")
@@ -79,8 +80,9 @@ def ttl_for(settings: Settings, operation: str, params: dict, today: date):
 
 
 class CachedSectorsGateway:
-    def __init__(self, transport, store: CacheStore, settings: Settings):
+    def __init__(self, transport, store: CacheStore, settings: Settings, utc_today=None):
         self.transport, self.store, self.settings = transport, store, settings
+        self.utc_today = utc_today or (lambda: datetime.now(UTC).date())
         # One session is never used concurrently. This also coalesces cache misses
         # within the single-worker MVP without an unbounded per-key lock registry.
         self.lock = asyncio.Lock()
@@ -89,6 +91,7 @@ class CachedSectorsGateway:
         symbol = symbol.strip().upper().removesuffix(".JK")
         params = {k: v for k, v in params.items() if v is not None}
         today = datetime.now(ZoneInfo("Asia/Jakarta")).date()
+        provider_today = latest_provider_date(today, self.utc_today())
         windows = {
             "get_daily": 30,
             "get_top_brokers": 90,
@@ -96,13 +99,13 @@ class CachedSectorsGateway:
             "get_broker_summary": 14,
         }
         if operation in windows:
-            params.setdefault("end", today.isoformat())
+            params.setdefault("end", provider_today.isoformat())
             end = date.fromisoformat(params["end"])
             params.setdefault(
                 "start", (end - timedelta(days=windows[operation] - 1)).isoformat()
             )
             start = date.fromisoformat(params["start"])
-            if start > end or end > today:
+            if start > end or end > provider_today:
                 raise SectorsValidationError("Invalid effective request dates.")
             if operation == "get_broker_summary" and (end - start).days >= 14:
                 raise SectorsValidationError(
