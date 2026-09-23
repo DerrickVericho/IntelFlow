@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 import requests
 
-from .exceptions import (
+from ..exceptions.sectors import (
     SectorsAuthenticationError,
     SectorsConfigurationError,
     SectorsNotFoundError,
@@ -18,7 +19,6 @@ from .exceptions import (
     SectorsUpstreamError,
     SectorsValidationError,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -244,11 +244,9 @@ class SectorsClient:
 
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
-        normalized = symbol.strip().upper()
-        if normalized.endswith(".JK"):
-            normalized = normalized[:-3]
-        if not normalized or not normalized.isalnum():
-            raise SectorsValidationError("Symbol must contain letters or numbers.")
+        normalized = symbol.strip().upper().removesuffix(".JK")
+        if not re.fullmatch(r"[A-Z]{4}", normalized):
+            raise SectorsValidationError("Symbol must contain four letters.")
         return normalized
 
     @staticmethod
@@ -278,9 +276,7 @@ class SectorsClient:
                 "Sectors API authentication failed.", **error_kwargs
             )
         if status_code == 404:
-            raise SectorsNotFoundError(
-                "Sectors data was not found.", **error_kwargs
-            )
+            raise SectorsNotFoundError("Sectors data was not found.", **error_kwargs)
         if status_code == 429:
             raise SectorsRateLimitError(
                 "Sectors API rate or credit limit was reached.", **error_kwargs
@@ -288,4 +284,3 @@ class SectorsClient:
         raise SectorsUpstreamError(
             "Sectors API returned an unexpected error.", **error_kwargs
         )
-

@@ -1,0 +1,44 @@
+name: intelflow
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: src/backend/DockerFile
+    restart: unless-stopped
+    environment:
+      SECTORS_API_KEY: ${SECTORS_API_KEY:-}
+      REDIS_URL: redis://redis:6379/0
+      LOG_DIR: /app/logs
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - backend-logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  redis-data:
+  backend-logs:
