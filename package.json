@@ -1,5 +1,41 @@
 {
+  "name": "intelflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config src/frontend/vite.config.ts",
+    "build": "tsc --noEmit -p src/frontend/tsconfig.json && vite build --config src/frontend/vite.config.ts",
+    "lint": "eslint src/frontend",
+    "test": "vitest run --config src/frontend/vitest.config.ts",
+    "test:e2e": "playwright test --config src/frontend/playwright.config.ts",
+    "preview": "vite preview --config src/frontend/vite.config.ts --host 127.0.0.1"
+  },
   "dependencies": {
-    "react": "^19.3.0"
+    "@fontsource/inter": "^5.3.0",
+    "@tanstack/react-query": "^5.103.2",
+    "echarts": "^6.1.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^26.6.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "jsdom": "^30.1.1",
+    "typescript": "~6.0.0",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }

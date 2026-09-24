@@ -3,6 +3,8 @@
 - The frontend is responsible for presentation and user interaction only.
 - Never call the Sectors API directly from browser code or expose API keys.
 - Obtain analysis data only through backend endpoints.
+- Treat `src/backend/API_CONTRACT.md` as the living list of frontend-facing
+  endpoints and update client types when that contract changes.
 - Do not recalculate scoring formulas in the frontend.
 - Follow `docs/UI_SPEC.md` and approved wireframes when they are available;
   update the relevant UI documentation when the current chat changes a UI
@@ -15,4 +17,3 @@
   wording.
 - Score color must not be the only indicator; always show the numeric 0–100
   value.
-

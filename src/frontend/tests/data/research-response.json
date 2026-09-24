@@ -1,0 +1,1458 @@
+{
+  "symbol": "BBCA",
+  "as_of": "2026-09-22",
+  "status": "complete",
+  "sources": [
+    {
+      "key": "daily",
+      "provider": "sectors",
+      "as_of": "2026-09-22",
+      "period": null,
+      "fetched_at": "2026-09-22T15:07:25.142907Z",
+      "effective_start": "2026-06-25",
+      "effective_end": "2026-09-22",
+      "is_stale": false
+    },
+    {
+      "key": "broker_top",
+      "provider": "sectors",
+      "as_of": "2026-09-22",
+      "period": null,
+      "fetched_at": "2026-09-22T15:07:25.144061Z",
+      "effective_start": "2026-08-26",
+      "effective_end": "2026-09-22",
+      "is_stale": false
+    },
+    {
+      "key": "foreign_flow",
+      "provider": "sectors",
+      "as_of": "2026-09-22",
+      "period": null,
+      "fetched_at": "2026-09-22T15:07:25.145533Z",
+      "effective_start": "2026-08-26",
+      "effective_end": "2026-09-22",
+      "is_stale": false
+    },
+    {
+      "key": "company_overview",
+      "provider": "sectors",
+      "as_of": null,
+      "period": null,
+      "fetched_at": "2026-09-22T15:07:25.148041Z",
+      "effective_start": null,
+      "effective_end": null,
+      "is_stale": false
+    },
+    {
+      "key": "company_financials",
+      "provider": "sectors",
+      "as_of": null,
+      "period": "2025",
+      "fetched_at": "2026-09-22T15:07:25.148041Z",
+      "effective_start": null,
+      "effective_end": null,
+      "is_stale": false
+    },
+    {
+      "key": "company_valuation",
+      "provider": "sectors",
+      "as_of": "2026-09-22",
+      "period": "2026",
+      "fetched_at": "2026-09-22T15:07:25.148041Z",
+      "effective_start": null,
+      "effective_end": null,
+      "is_stale": false
+    }
+  ],
+  "missing_inputs": [],
+  "flow": {
+    "window": "20d",
+    "effective_start": "2026-08-26",
+    "effective_end": "2026-09-22",
+    "trading_days": 20,
+    "incomplete_history": false,
+    "broker_summary": {
+      "brokers": [
+        {
+          "broker_code": "B0",
+          "side": "buyer",
+          "rank": 1,
+          "buy_idr": 50000,
+          "sell_idr": 30000,
+          "net_idr": 20000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B1",
+          "side": "buyer",
+          "rank": 2,
+          "buy_idr": 50000,
+          "sell_idr": 31000,
+          "net_idr": 19000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B2",
+          "side": "buyer",
+          "rank": 3,
+          "buy_idr": 50000,
+          "sell_idr": 32000,
+          "net_idr": 18000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B3",
+          "side": "buyer",
+          "rank": 4,
+          "buy_idr": 50000,
+          "sell_idr": 33000,
+          "net_idr": 17000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B4",
+          "side": "buyer",
+          "rank": 5,
+          "buy_idr": 50000,
+          "sell_idr": 34000,
+          "net_idr": 16000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B5",
+          "side": "buyer",
+          "rank": 6,
+          "buy_idr": 50000,
+          "sell_idr": 35000,
+          "net_idr": 15000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B6",
+          "side": "buyer",
+          "rank": 7,
+          "buy_idr": 50000,
+          "sell_idr": 36000,
+          "net_idr": 14000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B7",
+          "side": "buyer",
+          "rank": 8,
+          "buy_idr": 50000,
+          "sell_idr": 37000,
+          "net_idr": 13000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B8",
+          "side": "buyer",
+          "rank": 9,
+          "buy_idr": 50000,
+          "sell_idr": 38000,
+          "net_idr": 12000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "B9",
+          "side": "buyer",
+          "rank": 10,
+          "buy_idr": 50000,
+          "sell_idr": 39000,
+          "net_idr": 11000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S0",
+          "side": "seller",
+          "rank": 1,
+          "buy_idr": 50000,
+          "sell_idr": 60000,
+          "net_idr": -10000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S1",
+          "side": "seller",
+          "rank": 2,
+          "buy_idr": 50000,
+          "sell_idr": 59500,
+          "net_idr": -9500,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S2",
+          "side": "seller",
+          "rank": 3,
+          "buy_idr": 50000,
+          "sell_idr": 59000,
+          "net_idr": -9000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S3",
+          "side": "seller",
+          "rank": 4,
+          "buy_idr": 50000,
+          "sell_idr": 58500,
+          "net_idr": -8500,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S4",
+          "side": "seller",
+          "rank": 5,
+          "buy_idr": 50000,
+          "sell_idr": 58000,
+          "net_idr": -8000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S5",
+          "side": "seller",
+          "rank": 6,
+          "buy_idr": 50000,
+          "sell_idr": 57500,
+          "net_idr": -7500,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S6",
+          "side": "seller",
+          "rank": 7,
+          "buy_idr": 50000,
+          "sell_idr": 57000,
+          "net_idr": -7000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S7",
+          "side": "seller",
+          "rank": 8,
+          "buy_idr": 50000,
+          "sell_idr": 56500,
+          "net_idr": -6500,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S8",
+          "side": "seller",
+          "rank": 9,
+          "buy_idr": 50000,
+          "sell_idr": 56000,
+          "net_idr": -6000,
+          "foreign_net_idr": 100
+        },
+        {
+          "broker_code": "S9",
+          "side": "seller",
+          "rank": 10,
+          "buy_idr": 50000,
+          "sell_idr": 55500,
+          "net_idr": -5500,
+          "foreign_net_idr": 100
+        }
+      ],
+      "breadth": [
+        {
+          "top_n": 3,
+          "buyer_net_idr": 57000,
+          "seller_net_idr": -28500,
+          "balance_idr": 28500,
+          "balance_ratio": 0.3333333333333333,
+          "buyer_count": 3,
+          "seller_count": 3
+        },
+        {
+          "top_n": 5,
+          "buyer_net_idr": 90000,
+          "seller_net_idr": -45000,
+          "balance_idr": 45000,
+          "balance_ratio": 0.3333333333333333,
+          "buyer_count": 5,
+          "seller_count": 5
+        },
+        {
+          "top_n": 10,
+          "buyer_net_idr": 155000,
+          "seller_net_idr": -77500,
+          "balance_idr": 77500,
+          "balance_ratio": 0.3333333333333333,
+          "buyer_count": 10,
+          "seller_count": 10
+        }
+      ]
+    },
+    "foreign_flow": {
+      "net_inflow_idr": 100000,
+      "buy_idr": 200000,
+      "sell_idr": 100000,
+      "average_foreign_share_percent": 30.0,
+      "positive_days": 20,
+      "negative_days": 0,
+      "series": [
+        {
+          "date": "2026-08-26",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 5000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-08-27",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 10000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-08-28",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 15000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-08-31",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 20000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-01",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 25000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-02",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 30000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-03",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 35000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-04",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 40000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-07",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 45000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-08",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 50000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-09",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 55000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-10",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 60000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-11",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 65000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-14",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 70000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-15",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 75000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-16",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 80000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-17",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 85000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-18",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 90000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-21",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 95000,
+          "foreign_share_percent": 30.0
+        },
+        {
+          "date": "2026-09-22",
+          "net_inflow_idr": 5000,
+          "cumulative_net_inflow_idr": 100000,
+          "foreign_share_percent": 30.0
+        }
+      ]
+    },
+    "liquidity": {
+      "baseline_window": 20,
+      "latest_volume_shares": 163000,
+      "average_volume_shares": 152500.0,
+      "latest_vs_average_ratio": 1.0688524590163935,
+      "series": [
+        {
+          "date": "2026-08-26",
+          "close_idr": 1044,
+          "volume_shares": 144000,
+          "average_volume_shares": 133500.0,
+          "volume_ratio": 1.0786516853932584,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-08-27",
+          "close_idr": 1045,
+          "volume_shares": 145000,
+          "average_volume_shares": 134500.0,
+          "volume_ratio": 1.0780669144981412,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-08-28",
+          "close_idr": 1046,
+          "volume_shares": 146000,
+          "average_volume_shares": 135500.0,
+          "volume_ratio": 1.0774907749077491,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-08-31",
+          "close_idr": 1047,
+          "volume_shares": 147000,
+          "average_volume_shares": 136500.0,
+          "volume_ratio": 1.0769230769230769,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-01",
+          "close_idr": 1048,
+          "volume_shares": 148000,
+          "average_volume_shares": 137500.0,
+          "volume_ratio": 1.0763636363636364,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-02",
+          "close_idr": 1049,
+          "volume_shares": 149000,
+          "average_volume_shares": 138500.0,
+          "volume_ratio": 1.075812274368231,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-03",
+          "close_idr": 1050,
+          "volume_shares": 150000,
+          "average_volume_shares": 139500.0,
+          "volume_ratio": 1.075268817204301,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-04",
+          "close_idr": 1051,
+          "volume_shares": 151000,
+          "average_volume_shares": 140500.0,
+          "volume_ratio": 1.0747330960854093,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-07",
+          "close_idr": 1052,
+          "volume_shares": 152000,
+          "average_volume_shares": 141500.0,
+          "volume_ratio": 1.0742049469964665,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-08",
+          "close_idr": 1053,
+          "volume_shares": 153000,
+          "average_volume_shares": 142500.0,
+          "volume_ratio": 1.0736842105263158,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-09",
+          "close_idr": 1054,
+          "volume_shares": 154000,
+          "average_volume_shares": 143500.0,
+          "volume_ratio": 1.0731707317073171,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-10",
+          "close_idr": 1055,
+          "volume_shares": 155000,
+          "average_volume_shares": 144500.0,
+          "volume_ratio": 1.0726643598615917,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-11",
+          "close_idr": 1056,
+          "volume_shares": 156000,
+          "average_volume_shares": 145500.0,
+          "volume_ratio": 1.0721649484536082,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-14",
+          "close_idr": 1057,
+          "volume_shares": 157000,
+          "average_volume_shares": 146500.0,
+          "volume_ratio": 1.0716723549488054,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-15",
+          "close_idr": 1058,
+          "volume_shares": 158000,
+          "average_volume_shares": 147500.0,
+          "volume_ratio": 1.071186440677966,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-16",
+          "close_idr": 1059,
+          "volume_shares": 159000,
+          "average_volume_shares": 148500.0,
+          "volume_ratio": 1.0707070707070707,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-17",
+          "close_idr": 1060,
+          "volume_shares": 160000,
+          "average_volume_shares": 149500.0,
+          "volume_ratio": 1.0702341137123745,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-18",
+          "close_idr": 1061,
+          "volume_shares": 161000,
+          "average_volume_shares": 150500.0,
+          "volume_ratio": 1.069767441860465,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-21",
+          "close_idr": 1062,
+          "volume_shares": 162000,
+          "average_volume_shares": 151500.0,
+          "volume_ratio": 1.0693069306930694,
+          "baseline_observations": 20
+        },
+        {
+          "date": "2026-09-22",
+          "close_idr": 1063,
+          "volume_shares": 163000,
+          "average_volume_shares": 152500.0,
+          "volume_ratio": 1.0688524590163935,
+          "baseline_observations": 20
+        }
+      ]
+    }
+  },
+  "company": {
+    "name": "Test response company",
+    "sector": "Test",
+    "sub_sector": "Test",
+    "last_close_idr": 1063
+  },
+  "scores": {
+    "flow": {
+      "value": 65.77,
+      "components": [
+        {
+          "key": "liquidity",
+          "value": 53.68,
+          "weight": 30.0,
+          "reason": null,
+          "source_keys": [
+            "daily"
+          ]
+        },
+        {
+          "key": "foreign_flow",
+          "value": 76.67,
+          "weight": 30.0,
+          "reason": null,
+          "source_keys": [
+            "foreign_flow"
+          ]
+        },
+        {
+          "key": "broker_flow",
+          "value": 66.67,
+          "weight": 40.0,
+          "reason": null,
+          "source_keys": [
+            "broker_top"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    "fundamental": {
+      "value": 69.82,
+      "components": [
+        {
+          "key": "growth",
+          "value": 75.0,
+          "weight": 30.0,
+          "reason": null,
+          "source_keys": [
+            "company_financials"
+          ]
+        },
+        {
+          "key": "earnings",
+          "value": 76.25,
+          "weight": 25.0,
+          "reason": null,
+          "source_keys": [
+            "company_financials"
+          ]
+        },
+        {
+          "key": "cash_flow",
+          "value": 71.67,
+          "weight": 25.0,
+          "reason": null,
+          "source_keys": [
+            "company_financials"
+          ]
+        },
+        {
+          "key": "valuation",
+          "value": 51.69,
+          "weight": 20.0,
+          "reason": null,
+          "source_keys": [
+            "company_valuation"
+          ]
+        }
+      ],
+      "reason": null
+    },
+    "combined": {
+      "value": 67.39,
+      "components": [
+        {
+          "key": "flow",
+          "value": 65.77,
+          "weight": 60.0,
+          "reason": null,
+          "source_keys": []
+        },
+        {
+          "key": "fundamental",
+          "value": 69.82,
+          "weight": 40.0,
+          "reason": null,
+          "source_keys": []
+        }
+      ],
+      "reason": null
+    },
+    "calculation_version": "draft-v0.2",
+    "calculated_at": "2026-09-22T15:07:25.151262Z",
+    "input_periods": {
+      "flow_start": "2026-08-26",
+      "flow_end": "2026-09-22",
+      "financial_year": "2025",
+      "valuation_year": "2026"
+    },
+    "research_state": "Accumulation with fundamental support"
+  },
+  "key_points": [
+    {
+      "kind": "evidence",
+      "title": "Broker concentration",
+      "text": "Top buyer/seller balance: top 3: IDR 28,500; top 5: IDR 45,000; top 10: IDR 77,500",
+      "source_keys": [
+        "broker_top"
+      ]
+    },
+    {
+      "kind": "evidence",
+      "title": "Foreign investor flow",
+      "text": "Net IDR 100,000 across 20 observations; 20 positive-flow days.",
+      "source_keys": [
+        "foreign_flow"
+      ]
+    },
+    {
+      "kind": "evidence",
+      "title": "Trading activity",
+      "text": "Latest volume is 1.07 times its preceding 20-observation mean.",
+      "source_keys": [
+        "daily"
+      ]
+    },
+    {
+      "kind": "evidence",
+      "title": "Fundamental support",
+      "text": "Accumulation with fundamental support. Financial reporting year: 2025.",
+      "source_keys": [
+        "company_overview",
+        "company_financials",
+        "company_valuation"
+      ]
+    }
+  ],
+  "fundamentals": {
+    "reporting_period": "2025",
+    "currency": "IDR",
+    "groups": [
+      {
+        "key": "growth",
+        "label": "Growth",
+        "score": 75.0,
+        "metrics": [
+          {
+            "key": "revenue_growth_yoy",
+            "label": "Revenue growth YoY",
+            "value": 25.0,
+            "unit": "percent",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "down",
+            "series": [
+              {
+                "period": "2023",
+                "value": 50.0
+              },
+              {
+                "period": "2024",
+                "value": 33.33333333333333
+              },
+              {
+                "period": "2025",
+                "value": 25.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "earnings_growth_yoy",
+            "label": "Earnings growth YoY",
+            "value": 25.0,
+            "unit": "percent",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "down",
+            "series": [
+              {
+                "period": "2023",
+                "value": 50.0
+              },
+              {
+                "period": "2024",
+                "value": 33.33333333333333
+              },
+              {
+                "period": "2025",
+                "value": 25.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "quarterly_revenue_growth_yoy",
+            "label": "Latest quarterly revenue growth",
+            "value": 10.0,
+            "unit": "percent",
+            "period": null,
+            "period_type": "quarterly_yoy_undated",
+            "availability": "available",
+            "reason": "Provider does not identify the quarter",
+            "direction": "unknown",
+            "series": [],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "quarterly_earnings_growth_yoy",
+            "label": "Latest quarterly earnings growth",
+            "value": 20.0,
+            "unit": "percent",
+            "period": null,
+            "period_type": "quarterly_yoy_undated",
+            "availability": "available",
+            "reason": "Provider does not identify the quarter",
+            "direction": "unknown",
+            "series": [],
+            "source_keys": [
+              "company_financials"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "earnings",
+        "label": "Earnings",
+        "score": 76.25,
+        "metrics": [
+          {
+            "key": "revenue",
+            "label": "Revenue",
+            "value": 500000.0,
+            "unit": "idr",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "up",
+            "series": [
+              {
+                "period": "2022",
+                "value": 200000.0
+              },
+              {
+                "period": "2023",
+                "value": 300000.0
+              },
+              {
+                "period": "2024",
+                "value": 400000.0
+              },
+              {
+                "period": "2025",
+                "value": 500000.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "earnings",
+            "label": "Earnings",
+            "value": 50000.0,
+            "unit": "idr",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "up",
+            "series": [
+              {
+                "period": "2022",
+                "value": 20000.0
+              },
+              {
+                "period": "2023",
+                "value": 30000.0
+              },
+              {
+                "period": "2024",
+                "value": 40000.0
+              },
+              {
+                "period": "2025",
+                "value": 50000.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "operating_pnl",
+            "label": "Operating Pnl",
+            "value": 12000.0,
+            "unit": "idr",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 12000.0
+              },
+              {
+                "period": "2023",
+                "value": 12000.0
+              },
+              {
+                "period": "2024",
+                "value": 12000.0
+              },
+              {
+                "period": "2025",
+                "value": 12000.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "net_profit_margin",
+            "label": "Net Profit Margin",
+            "value": 15.0,
+            "unit": "percent",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 15.0
+              },
+              {
+                "period": "2023",
+                "value": 15.0
+              },
+              {
+                "period": "2024",
+                "value": 15.0
+              },
+              {
+                "period": "2025",
+                "value": 15.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "operating_profit_margin",
+            "label": "Operating Profit Margin",
+            "value": 20.0,
+            "unit": "percent",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 20.0
+              },
+              {
+                "period": "2023",
+                "value": 20.0
+              },
+              {
+                "period": "2024",
+                "value": 20.0
+              },
+              {
+                "period": "2025",
+                "value": 20.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "roa",
+            "label": "Roa",
+            "value": 10.0,
+            "unit": "percent",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 10.0
+              },
+              {
+                "period": "2023",
+                "value": 10.0
+              },
+              {
+                "period": "2024",
+                "value": 10.0
+              },
+              {
+                "period": "2025",
+                "value": 10.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "roe",
+            "label": "Roe",
+            "value": 20.0,
+            "unit": "percent",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 20.0
+              },
+              {
+                "period": "2023",
+                "value": 20.0
+              },
+              {
+                "period": "2024",
+                "value": 20.0
+              },
+              {
+                "period": "2025",
+                "value": 20.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "cash_flow",
+        "label": "Cash Flow",
+        "score": 71.67,
+        "metrics": [
+          {
+            "key": "operating_cash_flow",
+            "label": "Operating Cash Flow",
+            "value": 15000.0,
+            "unit": "idr",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 15000.0
+              },
+              {
+                "period": "2023",
+                "value": 15000.0
+              },
+              {
+                "period": "2024",
+                "value": 15000.0
+              },
+              {
+                "period": "2025",
+                "value": 15000.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "free_cash_flow",
+            "label": "Free Cash Flow",
+            "value": 10000.0,
+            "unit": "idr",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 10000.0
+              },
+              {
+                "period": "2023",
+                "value": 10000.0
+              },
+              {
+                "period": "2024",
+                "value": 10000.0
+              },
+              {
+                "period": "2025",
+                "value": 10000.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "capital_expenditure",
+            "label": "Capital Expenditure",
+            "value": -5000.0,
+            "unit": "idr",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": -5000.0
+              },
+              {
+                "period": "2023",
+                "value": -5000.0
+              },
+              {
+                "period": "2024",
+                "value": -5000.0
+              },
+              {
+                "period": "2025",
+                "value": -5000.0
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          },
+          {
+            "key": "cash_conversion",
+            "label": "Operating cash flow / earnings",
+            "value": 0.3,
+            "unit": "ratio",
+            "period": "2025",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "down",
+            "series": [
+              {
+                "period": "2022",
+                "value": 0.75
+              },
+              {
+                "period": "2023",
+                "value": 0.5
+              },
+              {
+                "period": "2024",
+                "value": 0.375
+              },
+              {
+                "period": "2025",
+                "value": 0.3
+              }
+            ],
+            "source_keys": [
+              "company_financials"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "valuation",
+        "label": "Valuation",
+        "score": 51.69,
+        "metrics": [
+          {
+            "key": "pe",
+            "label": "PE",
+            "value": 16.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "down",
+            "series": [
+              {
+                "period": "2022",
+                "value": 20.0
+              },
+              {
+                "period": "2023",
+                "value": 19.0
+              },
+              {
+                "period": "2024",
+                "value": 18.0
+              },
+              {
+                "period": "2025",
+                "value": 17.0
+              },
+              {
+                "period": "2026",
+                "value": 16.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          },
+          {
+            "key": "pe_peer_avg",
+            "label": "PE peer average",
+            "value": 20.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 20.0
+              },
+              {
+                "period": "2023",
+                "value": 20.0
+              },
+              {
+                "period": "2024",
+                "value": 20.0
+              },
+              {
+                "period": "2025",
+                "value": 20.0
+              },
+              {
+                "period": "2026",
+                "value": 20.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          },
+          {
+            "key": "pb",
+            "label": "PB",
+            "value": 3.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 3.0
+              },
+              {
+                "period": "2023",
+                "value": 3.0
+              },
+              {
+                "period": "2024",
+                "value": 3.0
+              },
+              {
+                "period": "2025",
+                "value": 3.0
+              },
+              {
+                "period": "2026",
+                "value": 3.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          },
+          {
+            "key": "pb_peer_avg",
+            "label": "PB peer average",
+            "value": 3.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 3.0
+              },
+              {
+                "period": "2023",
+                "value": 3.0
+              },
+              {
+                "period": "2024",
+                "value": 3.0
+              },
+              {
+                "period": "2025",
+                "value": 3.0
+              },
+              {
+                "period": "2026",
+                "value": 3.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          },
+          {
+            "key": "ps",
+            "label": "PS",
+            "value": 4.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 4.0
+              },
+              {
+                "period": "2023",
+                "value": 4.0
+              },
+              {
+                "period": "2024",
+                "value": 4.0
+              },
+              {
+                "period": "2025",
+                "value": 4.0
+              },
+              {
+                "period": "2026",
+                "value": 4.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          },
+          {
+            "key": "ps_peer_avg",
+            "label": "PS peer average",
+            "value": 4.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 4.0
+              },
+              {
+                "period": "2023",
+                "value": 4.0
+              },
+              {
+                "period": "2024",
+                "value": 4.0
+              },
+              {
+                "period": "2025",
+                "value": 4.0
+              },
+              {
+                "period": "2026",
+                "value": 4.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          },
+          {
+            "key": "pcf",
+            "label": "PCF",
+            "value": 5.0,
+            "unit": "ratio",
+            "period": "2026",
+            "period_type": "annual",
+            "availability": "available",
+            "reason": null,
+            "direction": "flat",
+            "series": [
+              {
+                "period": "2022",
+                "value": 5.0
+              },
+              {
+                "period": "2023",
+                "value": 5.0
+              },
+              {
+                "period": "2024",
+                "value": 5.0
+              },
+              {
+                "period": "2025",
+                "value": 5.0
+              },
+              {
+                "period": "2026",
+                "value": 5.0
+              }
+            ],
+            "source_keys": [
+              "company_valuation"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
