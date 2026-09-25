@@ -3,7 +3,7 @@
 import time
 from typing import Protocol
 from redis.exceptions import RedisError
-
+from redis.asyncio import Redis
 from ..exceptions.cache import CacheUnavailable
 
 
@@ -13,10 +13,10 @@ class CacheStore(Protocol):
 
 
 class RedisCache:
-    def __init__(self, client):
+    def __init__(self, client: Redis):
         self.client = client
 
-    async def get(self, key):
+    async def get(self, key: str) -> str | None:
         try:
             return await self.client.get(key)
         except RedisError as exc:
@@ -24,7 +24,7 @@ class RedisCache:
                 "Cache unavailable; paid upstream calls disabled."
             ) from exc
 
-    async def set(self, key, value, ttl_seconds):
+    async def set(self, key: str, value: any, ttl_seconds: int) -> None:
         try:
             await self.client.set(key, value, ex=ttl_seconds)
         except RedisError as exc:
