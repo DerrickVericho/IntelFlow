@@ -10,7 +10,8 @@ from redis.asyncio import Redis
 
 from src.backend.cache.store import RedisCache
 from src.backend.config import Settings
-from src.backend.sectors.cached import CachedSectorsGateway, canonical_key
+from src.backend.sectors.cached import CachedSectorsGateway
+from src.backend.sectors.utils import canonical_key
 from src.backend.tests.fixtures import FixtureTransport, TODAY
 
 

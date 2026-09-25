@@ -18,14 +18,10 @@ from src.backend.exceptions.sectors import (
     SectorsUpstreamError,
     SectorsValidationError,
 )
-from src.backend.sectors.cached import (
-    CachedSectorsGateway,
-    ADAPTERS,
-    canonical_key,
-    ttl_for,
-)
+from src.backend.sectors.adapters import ADAPTERS
+from src.backend.sectors.cached import CachedSectorsGateway
 from src.backend.sectors.client import SectorsClient
-from src.backend.sectors.dates import latest_provider_date
+from src.backend.sectors.utils import canonical_key, latest_provider_date, ttl_for
 from src.backend.sectors.mapper import (
     fundamentals_evidence,
     liquidity_evidence,
@@ -335,7 +331,9 @@ def test_logger_does_not_serialize_exception_secrets():
 
 
 def test_development_formatter_colors_severity():
-    record = logging.LogRecord("test", logging.WARNING, __file__, 1, "Careful", (), None)
+    record = logging.LogRecord(
+        "test", logging.WARNING, __file__, 1, "Careful", (), None
+    )
     output = TextFormatter(color=True).format(record)
     assert "\033[33mWARNING" in output
     assert "\033[0m" in output
@@ -443,7 +441,9 @@ def test_request_log_includes_direct_client_ip(monkeypatch, capsys):
     with TestClient(create_app(service=service)) as client:
         response = client.get("/api/v1/stocks/ABC/intel-score")
     entries = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
-    completed = next(entry for entry in entries if entry["message"] == "Request completed")
+    completed = next(
+        entry for entry in entries if entry["message"] == "Request completed"
+    )
     assert completed["client_ip"] == "testclient"
     assert completed["request_id"] == response.headers["X-Request-ID"]
     assert completed["status_code"] == 422

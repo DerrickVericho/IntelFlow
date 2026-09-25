@@ -1,0 +1,19 @@
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.group { border: 1px solid var(--border-soft); background: #101a28; border-radius: var(--radius-sm); padding: 18px; min-width: 0; }
+.groupHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.groupHeading h3 { font-size: 14px; }
+.groupHeading > span { font-size: 10px; color: var(--blue); }
+.featuredLabel { font-size: 9px; color: var(--muted); margin-top: 18px; }
+.metrics { margin-top: 15px; }
+.metric { border-top: 1px solid var(--border-soft); padding: 12px 0; }
+.metric summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 11px; }
+.metric summary::-webkit-details-marker { display: none; }
+.metric summary > span::before { content: '+'; color: var(--muted); margin-right: 7px; }
+.metric[open] summary > span::before { content: '−'; }
+.metric summary strong { white-space: nowrap; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.metric small { color: var(--muted); font-size: 9px; margin-top: 5px; display: block; padding-left: 15px; }
+.metricDetail { padding-top: 12px; font-size: 10px; color: var(--muted); }
+.metricDetail table { font-size: 10px; margin: 10px 0; }
+.metricDetail p { margin-top: 7px; }
+.note { color: var(--muted); font-size: 10px; margin-top: 18px; }
+@media (max-width: 760px) { .groups { grid-template-columns: 1fr; } }

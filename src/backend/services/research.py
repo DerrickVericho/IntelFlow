@@ -24,7 +24,7 @@ from ..schemas.prices import PricePoint, PriceResponse
 from ..schemas.research import ResearchResponse
 from ..schemas.shareholders import Category, ShareholderPoint, ShareholderResponse
 from ..scoring.research import calculate
-from ..sectors.dates import latest_provider_date
+from ..sectors.utils import latest_provider_date
 from ..sectors.gateway import SectorsGateway
 from ..sectors.mapper import (
     broker_evidence,
