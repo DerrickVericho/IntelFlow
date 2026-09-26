@@ -35,3 +35,7 @@ dev = [
 testpaths = ["src/backend/tests"]
 pythonpath = ["."]
 addopts = "--basetemp=.pytest-tmp"
+markers = [
+    "redis_integration: requires TEST_REDIS_URL and a running Redis",
+    "live_sectors: makes a paid Sectors API request when RUN_SECTORS_TESTS=1",
+]
