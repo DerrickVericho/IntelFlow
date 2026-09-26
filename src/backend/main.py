@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     """Own Redis and Sectors transport for a single application worker."""
 
     if application.state.injected_service:
@@ -95,9 +96,14 @@ def create_app(*, service: ResearchService | None = None) -> FastAPI:
     application.add_middleware(RequestLoggingMiddleware)
 
     @application.get("/health", tags=["system"])
-    async def health():
+    async def health() -> JSONResponse:
         if application.state.injected_service:
-            return {"status": "healthy", "dependencies": {"redis": "test-double"}}
+            return JSONResponse(
+                content={
+                    "status": "healthy",
+                    "dependencies": {"redis": "test-double"},
+                }
+            )
 
         try:
             await application.state.redis.ping()
@@ -110,7 +116,12 @@ def create_app(*, service: ResearchService | None = None) -> FastAPI:
                 },
             )
 
-        return {"status": "healthy", "dependencies": {"redis": "healthy"}}
+        return JSONResponse(
+            content={
+                "status": "healthy",
+                "dependencies": {"redis": "healthy"},
+            }
+        )
 
     return application
 
