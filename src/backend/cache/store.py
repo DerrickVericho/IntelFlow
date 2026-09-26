@@ -2,8 +2,10 @@
 
 import time
 from typing import Protocol
+
 from redis.exceptions import RedisError
 from redis.asyncio import Redis
+
 from ..exceptions.cache import CacheUnavailable
 
 
@@ -13,7 +15,7 @@ class CacheStore(Protocol):
 
 
 class RedisCache:
-    def __init__(self, client: Redis):
+    def __init__(self, client: Redis) -> None:
         self.client = client
 
     async def get(self, key: str) -> str | None:
@@ -24,7 +26,7 @@ class RedisCache:
                 "Cache unavailable; paid upstream calls disabled."
             ) from exc
 
-    async def set(self, key: str, value: any, ttl_seconds: int) -> None:
+    async def set(self, key: str, value: str, ttl_seconds: int) -> None:
         try:
             await self.client.set(key, value, ex=ttl_seconds)
         except RedisError as exc:
@@ -36,12 +38,16 @@ class RedisCache:
 class MemoryCache:
     """Expiring test double; not the production cache."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.values: dict[str, tuple[float, str]] = {}
 
-    async def get(self, key):
-        expiry, value = self.values.get(key, (0, None))
+    async def get(self, key: str) -> str | None:
+        cached = self.values.get(key)
+        if cached is None:
+            return None
+
+        expiry, value = cached
         return value if expiry > time.monotonic() else None
 
-    async def set(self, key, value, ttl_seconds):
+    async def set(self, key: str, value: str, ttl_seconds: int) -> None:
         self.values[key] = (time.monotonic() + ttl_seconds, value)

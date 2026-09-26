@@ -2,20 +2,20 @@
 
 import logging
 import re
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
+from typing import Literal, TypeVar
 from zoneinfo import ZoneInfo
 
 from ..exceptions.research import (
     DataNotFoundError,
     InvalidBrokersError,
-    InvalidRangeError,
-    InvalidSymbolError,
     InvalidWindowError,
     InvalidYearError,
     ResearchUnavailableError,
 )
-from ..exceptions.sectors import SectorsError, SectorsResponseError
-from ..models.common import MissingInput, Source
+from ..exceptions.sectors import SectorsError
+from ..models.common import MissingInput
 from ..models.flow import FlowEvidence
 from ..models.research import Company, KeyPoint
 from ..schemas.brokers import BrokerPoint, BrokerResponse, BrokerSeries
@@ -32,38 +32,40 @@ from ..sectors.mapper import (
     foreign_evidence,
     liquidity_evidence,
 )
+from ..sectors.schemas.transactions import DailyTransaction
+from ..sectors.types import Retrieved
+from .utils import (
+    market_range,
+    normalize_symbol,
+    research_status,
+    source_record,
+    unique_rows,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def normalize_symbol(symbol):
-    value = symbol.strip().upper().removesuffix(".JK")
-    if not re.fullmatch(r"[A-Z]{4}", value):
-        raise InvalidSymbolError("Use a four-letter IDX ticker, for example BBCA.")
-    return value
-
-
-def unique_rows(rows):
-    by_date = {}
-    for row in rows:
-        if row.date in by_date and row != by_date[row.date]:
-            raise SectorsResponseError(
-                "Conflicting upstream observations for the same date."
-            )
-        by_date[row.date] = row
-    return sorted(by_date.values(), key=lambda r: r.date)
+T = TypeVar("T")
 
 
 class ResearchService:
-    def __init__(self, gateway: SectorsGateway, today=None, utc_today=None):
+    def __init__(
+        self,
+        gateway: SectorsGateway,
+        today: Callable[[], date] | None = None,
+        utc_today: Callable[[], date] | None = None,
+    ) -> None:
         self.gateway = gateway
         self.today = today or (lambda: datetime.now(ZoneInfo("Asia/Jakarta")).date())
         self.utc_today = utc_today or (lambda: datetime.now(UTC).date())
 
-    def _market_end(self):
+    def _market_end(self) -> date:
         return latest_provider_date(self.today(), self.utc_today())
 
-    async def _optional(self, call, key, missing):
+    async def _optional(
+        self,
+        call: Awaitable[Retrieved[T]],
+        key: str,
+        missing: list[MissingInput],
+    ) -> Retrieved[T] | None:
         try:
             return await call
         except SectorsError as exc:
@@ -78,28 +80,12 @@ class ResearchService:
             missing.append(MissingInput(key=key, reason=type(exc).__name__))
             return None
 
-    def _source(
-        self, key, result, *, as_of=None, start=None, end=None, period=None, max_age=7
-    ):
-        return Source(
-            key=key,
-            as_of=as_of,
-            period=period,
-            fetched_at=result.fetched_at,
-            effective_start=start,
-            effective_end=end,
-            is_stale=as_of is not None and (self.today() - as_of).days > max_age,
-        )
-
-    @staticmethod
-    def _status(missing, sources):
-        return (
-            "partial"
-            if missing
-            else "stale" if any(s.is_stale for s in sources) else "complete"
-        )
-
-    async def _history(self, symbol, *, end=None):
+    async def _history(
+        self,
+        symbol: str,
+        *,
+        end: date | None = None,
+    ) -> tuple[Retrieved[list[DailyTransaction]], list[DailyTransaction]]:
         end = end or self._market_end()
         result = await self.gateway.get_daily(
             symbol, start=(end - timedelta(days=89)).isoformat(), end=end.isoformat()
@@ -113,7 +99,11 @@ class ResearchService:
             )
         return result, rows
 
-    async def flow(self, symbol, window="20d"):
+    async def flow(
+        self,
+        symbol: str,
+        window: Literal["1d", "5d", "20d"] = "20d",
+    ) -> FlowResponse:
         symbol = normalize_symbol(symbol)
         if window not in ("1d", "5d", "20d"):
             raise InvalidWindowError("Window must be 1d, 5d, or 20d.")
@@ -122,9 +112,19 @@ class ResearchService:
         count = int(window[:-1])
         selected = history[-count:]
         start, end = selected[0].date, selected[-1].date
-        missing, sources = [], [
-            self._source("daily", result, as_of=end, start=history[0].date, end=end)
-        ]
+        missing, sources = (
+            [],
+            [
+                source_record(
+                    "daily",
+                    result,
+                    today=self.today(),
+                    as_of=end,
+                    start=history[0].date,
+                    end=end,
+                )
+            ],
+        )
         if len(selected) < count:
             missing.append(
                 MissingInput(
@@ -171,7 +171,14 @@ class ResearchService:
                 top = None
             else:
                 sources.append(
-                    self._source("broker_top", top, as_of=end, start=start, end=end)
+                    source_record(
+                        "broker_top",
+                        top,
+                        today=self.today(),
+                        as_of=end,
+                        start=start,
+                        end=end,
+                    )
                 )
                 if not top.data.top_buyers and not top.data.top_sellers:
                     missing.append(
@@ -181,9 +188,10 @@ class ResearchService:
                     )
         if foreign:
             sources.append(
-                self._source(
+                source_record(
                     "foreign_flow",
                     foreign,
+                    today=self.today(),
                     as_of=foreign_rows[-1].date if foreign_rows else None,
                     start=start,
                     end=end,
@@ -216,13 +224,13 @@ class ResearchService:
         return FlowResponse(
             symbol=symbol,
             as_of=end,
-            status=self._status(missing, sources),
+            status=research_status(missing, sources),
             missing_inputs=missing,
             sources=sources,
             flow=evidence,
         )
 
-    async def research(self, symbol):
+    async def research(self, symbol: str) -> ResearchResponse:
         response = await self.flow(symbol, "20d")
         symbol = response.symbol
         missing, sources = list(response.missing_inputs), list(response.sources)
@@ -254,7 +262,13 @@ class ResearchService:
                         )
                         or None
                     )
-                source = self._source(key, result, as_of=as_of, period=period)
+                source = source_record(
+                    key,
+                    result,
+                    today=self.today(),
+                    as_of=as_of,
+                    period=period,
+                )
                 if name == "financials" and period:
                     source.is_stale = int(period) < self.today().year - 2
                 sources.append(source)
@@ -378,7 +392,7 @@ class ResearchService:
         return ResearchResponse(
             symbol=symbol,
             as_of=response.as_of,
-            status=self._status(missing, sources),
+            status=research_status(missing, sources),
             sources=sources,
             missing_inputs=missing,
             flow=response.flow,
@@ -388,20 +402,18 @@ class ResearchService:
             fundamentals=fundamentals,
         )
 
-    def _range(self, range_):
-        days = {"1w": 7, "1m": 30, "3m": 90}.get(range_)
-        if not days:
-            raise InvalidRangeError("Range must be 1w, 1m, or 3m.")
-        end = self._market_end()
-        return end - timedelta(days=days - 1), end
-
-    async def prices(self, symbol, range_):
+    async def prices(self, symbol: str, range_: str) -> PriceResponse:
         symbol = normalize_symbol(symbol)
-        start, end = self._range(range_)
+        start, end = market_range(range_, self._market_end())
         result, history = await self._history(symbol, end=end)
         rows = [r for r in history if start <= r.date <= end]
-        source = self._source(
-            "daily", result, as_of=rows[-1].date if rows else None, start=start, end=end
+        source = source_record(
+            "daily",
+            result,
+            today=self.today(),
+            as_of=rows[-1].date if rows else None,
+            start=start,
+            end=end,
         )
         incomplete = (
             not rows
@@ -420,7 +432,7 @@ class ResearchService:
         return PriceResponse(
             symbol=symbol,
             as_of=source.as_of,
-            status=self._status(missing, [source]),
+            status=research_status(missing, [source]),
             sources=[source],
             missing_inputs=missing,
             range=range_,
@@ -430,7 +442,11 @@ class ResearchService:
             series=[PricePoint(**r.model_dump(exclude={"symbol"})) for r in rows],
         )
 
-    async def shareholders(self, symbol, year=None):
+    async def shareholders(
+        self,
+        symbol: str,
+        year: int | None = None,
+    ) -> ShareholderResponse:
         symbol = normalize_symbol(symbol)
         year = year if year is not None else self.today().year
         if not 2021 <= year <= self.today().year:
@@ -458,8 +474,12 @@ class ResearchService:
             )
             for r in rows
         ]
-        source = self._source(
-            "shareholders", result, as_of=rows[-1].date if rows else None, max_age=75
+        source = source_record(
+            "shareholders",
+            result,
+            today=self.today(),
+            as_of=rows[-1].date if rows else None,
+            max_age=75,
         )
         if year < self.today().year:
             source.is_stale = False
@@ -471,7 +491,7 @@ class ResearchService:
         return ShareholderResponse(
             symbol=symbol,
             as_of=source.as_of,
-            status=self._status(missing, [source]),
+            status=research_status(missing, [source]),
             sources=[source],
             missing_inputs=missing,
             year=year,
@@ -487,9 +507,14 @@ class ResearchService:
             series=points,
         )
 
-    async def brokers(self, symbol, range_, brokers=None):
+    async def brokers(
+        self,
+        symbol: str,
+        range_: str,
+        brokers: str | None = None,
+    ) -> BrokerResponse:
         symbol = normalize_symbol(symbol)
-        start, end = self._range(range_)
+        start, end = market_range(range_, self._market_end())
         selected = None
         if brokers is not None:
             selected = list(
@@ -515,9 +540,10 @@ class ResearchService:
                 chunk = [r for r in result.data.data if cursor <= r.date <= chunk_end]
                 rows.extend(chunk)
                 sources.append(
-                    self._source(
+                    source_record(
                         key,
                         result,
+                        today=self.today(),
                         as_of=max((r.date for r in chunk), default=None),
                         start=cursor,
                         end=chunk_end,
@@ -597,7 +623,7 @@ class ResearchService:
         return BrokerResponse(
             symbol=symbol,
             as_of=rows[-1].date if rows else None,
-            status=self._status(missing, sources),
+            status=research_status(missing, sources),
             sources=sources,
             missing_inputs=missing,
             range=range_,

@@ -148,6 +148,12 @@ symbol. A future <code>end</code> date returns <code>400</code>. Requests wider
 than 90 days are clamped to the most recent 90 days ending at
 <code>end</code>.
 
+IntelFlow uses the earlier of the Jakarta and UTC calendar dates for explicit
+market-data range ends. This conservative client policy avoids sending the new
+Jakarta date during 00:00–06:59 WIB while it is still the previous date in UTC.
+Sectors does not document which timezone it uses for its future-date check, so
+this policy does not assert an upstream timezone guarantee.
+
 The API has no <code>limit</code> parameter. To obtain the latest 60 trading
 observations, request a 90-calendar-day window, sort by <code>date</code>, and
 take the final 60 records locally.
@@ -268,8 +274,9 @@ Endpoint-specific failures include <code>400</code> for an invalid year and
 **Endpoint:** <code>GET /v2/company/report/{symbol}/</code>  
 **Cost:** 1 credit per section; omitting <code>sections</code> requests all 8
 sections and costs 8 credits  
-**Project status:** Tentative; use only when a more specific endpoint cannot
-satisfy the information need  
+**Project status:** Selected for fundamental context. Request only the minimum
+sections needed; `financials` and `valuation` are the initial Fundamental Score
+inputs.
 **Reference:** [Company Report](https://docs.sectors.app/api-references/v2/indonesia/report/company-report)
 
 Returns a comprehensive fundamental report. Agents must request only the

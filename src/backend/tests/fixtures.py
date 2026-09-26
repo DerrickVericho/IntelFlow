@@ -3,15 +3,17 @@
 from copy import deepcopy
 from datetime import date, timedelta
 from collections import Counter
+from collections.abc import Callable
+from typing import Any
 from ..exceptions.sectors import SectorsNotFoundError
 
 TODAY = date(2026, 9, 22)
 
 
 class FixtureTransport:
-    def __init__(self):
-        self.calls = Counter()
-        self.failures = {}
+    def __init__(self) -> None:
+        self.calls: Counter[str] = Counter()
+        self.failures: dict[str, Exception] = {}
         self.days = [
             TODAY - timedelta(days=n)
             for n in range(89, -1, -1)
@@ -31,8 +33,8 @@ class FixtureTransport:
             for i, d in enumerate(self.days)
         ]
 
-    def __getattr__(self, operation):
-        def get(symbol="TEST", **params):
+    def __getattr__(self, operation: str) -> Callable[..., Any]:
+        def get(symbol: str = "TEST", **params: Any) -> Any:
             self.calls[operation] += 1
             if operation in self.failures:
                 raise self.failures[operation]
@@ -42,11 +44,16 @@ class FixtureTransport:
 
         return get
 
-    def _get_daily(self, **params):
+    def _get_daily(self, **params: Any) -> list[dict[str, Any]]:
         return self.rows
 
-    def _get_top_brokers(self, start, end, **params):
-        def row(i, side):
+    def _get_top_brokers(
+        self,
+        start: str,
+        end: str,
+        **params: Any,
+    ) -> dict[str, Any]:
+        def row(i: int, side: int) -> dict[str, Any]:
             return dict(
                 rank=i + 1,
                 broker_code=("B" if side == 1 else "S") + str(i),
@@ -69,7 +76,7 @@ class FixtureTransport:
             top_sellers=[row(i, -1) for i in range(10)],
         )
 
-    def _get_foreign_flow(self, start, end):
+    def _get_foreign_flow(self, start: str, end: str) -> dict[str, Any]:
         return dict(
             symbol="TEST.JK",
             start=start,
@@ -87,7 +94,7 @@ class FixtureTransport:
             ],
         )
 
-    def _get_company_report(self, sections):
+    def _get_company_report(self, sections: list[str]) -> dict[str, Any]:
         overview = dict(
             industry="Test",
             sub_industry="Test",
@@ -153,7 +160,7 @@ class FixtureTransport:
             **{s: all_sections[s] for s in sections},
         )
 
-    def _get_shareholder_composition(self, year):
+    def _get_shareholder_composition(self, year: int) -> dict[str, Any]:
         categories = (
             "insurance",
             "corporate",
@@ -181,7 +188,7 @@ class FixtureTransport:
             ],
         )
 
-    def _get_broker_summary(self, start, end):
+    def _get_broker_summary(self, start: str, end: str) -> dict[str, Any]:
         return dict(
             symbol="TEST.JK",
             start=start,

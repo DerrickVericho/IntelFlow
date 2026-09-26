@@ -20,26 +20,30 @@ Service = Annotated[ResearchService, Depends(get_service)]
 
 
 @router.get("/{symbol}/intel-score", response_model=ResearchResponse)
-async def research(symbol: str, service: Service):
+async def research(symbol: str, service: Service) -> ResearchResponse:
     return await service.research(symbol)
 
 
 @router.get("/{symbol}/flow", response_model=FlowResponse)
 async def flow(
     symbol: str, service: Service, window: Literal["1d", "5d", "20d"] = Query(...)
-):
+) -> FlowResponse:
     return await service.flow(symbol, window)
 
 
 @router.get("/{symbol}/price-history", response_model=PriceResponse)
 async def prices(
     symbol: str, service: Service, range: Literal["1w", "1m", "3m"] = Query(...)
-):
+) -> PriceResponse:
     return await service.prices(symbol, range)
 
 
 @router.get("/{symbol}/shareholders", response_model=ShareholderResponse)
-async def shareholders(symbol: str, service: Service, year: int | None = Query(None)):
+async def shareholders(
+    symbol: str,
+    service: Service,
+    year: int | None = Query(None),
+) -> ShareholderResponse:
     return await service.shareholders(symbol, year)
 
 
@@ -49,5 +53,5 @@ async def brokers(
     service: Service,
     range: Literal["1w", "1m", "3m"] = Query(...),
     brokers: str | None = Query(None, max_length=29),
-):
+) -> BrokerResponse:
     return await service.brokers(symbol, range, brokers)

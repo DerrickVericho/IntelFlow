@@ -1,6 +1,9 @@
 """Pure transformations from validated provider facts to research evidence."""
 
+from collections.abc import Iterable, Sequence
+from datetime import date
 from statistics import mean
+from typing import Literal
 
 from ..models.flow import (
     BrokerBar,
@@ -12,9 +15,12 @@ from ..models.flow import (
     LiquidityPoint,
 )
 from ..models.fundamentals import Fundamentals, Metric, MetricGroup, MetricPoint
+from .schemas.brokers import ForeignFlowDetails, TopBrokerList
+from .schemas.company_reports import CompanyFinancialsDetail, CompanyValuationDetail
+from .schemas.transactions import DailyTransaction
 
 
-def broker_evidence(report):
+def broker_evidence(report: TopBrokerList | None) -> BrokerSummary:
     if report is None:
         return BrokerSummary()
     buyers = sorted(report.top_buyers, key=lambda b: b.rank)
@@ -55,7 +61,7 @@ def broker_evidence(report):
     return BrokerSummary(brokers=bars, breadth=breadth)
 
 
-def foreign_evidence(rows):
+def foreign_evidence(rows: Sequence[ForeignFlowDetails]) -> ForeignFlow:
     rows = sorted(rows, key=lambda r: r.date)
     if not rows:
         return ForeignFlow()
@@ -81,7 +87,10 @@ def foreign_evidence(rows):
     )
 
 
-def liquidity_evidence(history, selected_dates):
+def liquidity_evidence(
+    history: Sequence[DailyTransaction],
+    selected_dates: set[date],
+) -> Liquidity:
     history = sorted(history, key=lambda r: r.date)
     series = []
     for i, row in enumerate(history):
@@ -111,7 +120,13 @@ def liquidity_evidence(history, selected_dates):
     )
 
 
-def metric(key, label, unit, pairs, source="company_financials"):
+def metric(
+    key: str,
+    label: str,
+    unit: Literal["idr", "percent", "ratio"],
+    pairs: Iterable[tuple[int, int | float | None]],
+    source: str = "company_financials",
+) -> Metric:
     pairs = sorted(pairs, key=lambda p: p[0])
     series = [MetricPoint(period=str(p), value=v) for p, v in pairs]
     value = series[-1].value if series else None
@@ -135,7 +150,10 @@ def metric(key, label, unit, pairs, source="company_financials"):
     )
 
 
-def fundamentals_evidence(financials, valuation):
+def fundamentals_evidence(
+    financials: CompanyFinancialsDetail | None,
+    valuation: CompanyValuationDetail | None,
+) -> Fundamentals:
     rows = (
         sorted(financials.historical_financials, key=lambda r: r.year)
         if financials

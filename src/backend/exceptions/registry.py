@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from .base import AppError
+from .cache import CacheUnavailable
 from .sectors import SectorsError
 
 logger = logging.getLogger(__name__)
@@ -18,12 +19,26 @@ def error_response(request: Request, error: AppError) -> JSONResponse:
     """Serialize only the safe public error contract, never provider details."""
 
     request_id = getattr(request.state, "request_id", "-")
+    if isinstance(error, SectorsError):
+        message = {
+            "DATA_NOT_FOUND": "Sectors data was not found.",
+            "UPSTREAM_RATE_LIMIT": "Sectors API rate or credit limit was reached.",
+            "UPSTREAM_AUTHENTICATION_ERROR": "Sectors API authentication failed.",
+            "UPSTREAM_CONFIGURATION_ERROR": "Sectors API is not configured.",
+            "UPSTREAM_REQUEST_REJECTED": "Sectors API rejected the request.",
+            "UPSTREAM_UNAVAILABLE": "Sectors API is unavailable.",
+            "UPSTREAM_INVALID_RESPONSE": "Sectors API returned an invalid response.",
+        }.get(error.code, "Sectors API request failed.")
+    elif isinstance(error, CacheUnavailable):
+        message = "Cache unavailable; request could not be completed."
+    else:
+        message = error.message
     return JSONResponse(
         status_code=error.http_status,
         content={
             "error": {
                 "code": error.code,
-                "message": error.message,
+                "message": message,
                 "request_id": request_id,
             }
         },

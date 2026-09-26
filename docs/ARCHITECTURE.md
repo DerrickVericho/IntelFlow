@@ -43,16 +43,17 @@ API v2.
 - `gateway.py` defines the operations required by the application.
 - `client.py` handles HTTP transport, authentication, parameters, logging, and
   upstream error mapping.
-- `exceptions.py` defines failures that callers can handle without depending on
-  `requests` exceptions.
-- `schemas/` will describe Sectors response payloads after representative
-  samples have been reviewed. These provider schemas contain only fields used
-  by IntelFlow and must not become the application's shared domain models.
+- `src/backend/exceptions/sectors.py` defines failures that callers can handle
+  without depending on `requests` exceptions.
+- `src/backend/sectors/schemas/` describes the reviewed Sectors response payloads.
+  These provider schemas contain only fields used by IntelFlow and must not
+  become the application's public frontend models.
 - Representative outputs for all eight selected endpoints are stored in
   `output-schema/`; the modeling policy is defined in `docs/SCHEMA.md`.
 
-The Sectors layer returns raw decoded JSON for now. It must not contain scoring
-or other product-level business logic.
+The HTTP client returns raw decoded JSON. The async cached gateway validates
+and returns typed provider models with their original fetched timestamps.
+It contains no scoring formulas.
 
 ```text
 Application service -> SectorsGateway -> CachedSectorsGateway
@@ -64,14 +65,34 @@ Application service -> SectorsGateway -> CachedSectorsGateway
 is added by a gateway wrapper so the client is still usable and testable without
 a cache.
 
+Market-data requests use a shared safe range end no later than the UTC calendar
+date. This prevents a new Jakarta date from being sent before UTC midnight,
+when the Daily Transaction endpoint can reject future `end` dates with 400.
+The service uses one end date for its daily and foreign inputs, and the gateway
+applies the same bound before any paid request. The latest observed trading
+date remains separate from this requested range end.
+
+Implemented async strategy: Redis uses its async client; synchronous requests
+transport runs through `asyncio.to_thread`. One gateway lock serializes access
+to its shared requests Session and coalesces equivalent in-process misses.
+Run one application worker in this MVP. Multi-worker deployments would require
+a cross-process request lock to prevent duplicate paid misses.
+
 ## API application
 
-- `src/backend/main.py` creates the FastAPI application, exposes `/health`,
-  adds request logging, and converts Sectors exceptions into safe HTTP errors.
-- `src/backend/logger.py` owns the shared console logging format, log level,
-  and per-request correlation ID.
+- `src/backend/main.py` assembles the FastAPI application and exposes `/health`.
+- `src/backend/middleware.py` owns request correlation, client IP, timing and
+  access logging. `src/backend/exceptions/registry.py` registers safe handlers.
+- `src/backend/logger.py` owns console formatting and request context: readable
+  colored text in development, JSON lines in production.
 - Future feature routes should be added as separate routers and registered by
   the app factory rather than implemented directly in `main.py`.
+
+The research router is `api/routes.py`. Public schemas and domain models are
+split by product section instead of collected in a single research file.
+Orchestration remains in `services/research.py`. Routes are implemented for all
+five planned research/chart use cases. See `docs/BACKEND_READINESS.md` for
+coverage.
 
 Run locally with:
 
@@ -86,32 +107,47 @@ inside route handlers.
 
 ```text
 src/backend/
-├── main.py                 # FastAPI app construction and global handlers
-├── logger.py               # Shared structured logging
-├── api/
-│   ├── routes/             # HTTP endpoints grouped by feature
-│   │   ├── stocks.py
-│   │   ├── broker_flow.py
-│   │   ├── shareholders.py
-│   │   └── fundamentals.py
-│   └── schemas/            # Public request/response models
-├── domain/
-│   └── models/             # Stable internal records shared by services/cache/scoring
+├── main.py                 # FastAPI app construction and health
+├── middleware.py           # Request logging, correlation and client IP
+├── logger.py               # Console text or JSON logging
+├── api/routes.py           # Thin research HTTP routes
+├── schemas/                # Public HTTP request/response models by section
+├── models/                 # Stable normalized domain models by section
+├── exceptions/             # Typed failures and HTTP handler registry
+│   ├── base.py
+│   ├── cache.py
+│   ├── configuration.py
+│   ├── research.py
+│   ├── registry.py
+│   └── sectors.py
 ├── services/
-│   └── stock_analysis.py   # Coordinates data needed for a stock analysis
+│   ├── research.py          # Coordinates complete research use cases
+│   └── utils.py             # Pure service-level normalization and date helpers
 ├── sectors/
 │   ├── client.py           # Raw Sectors HTTP implementation
 │   ├── gateway.py          # Contract used by services
-│   ├── exceptions.py       # Sectors-specific failures
-│   ├── schemas/            # Sectors-specific response payload models
-│   └── mapper.py            # Converts provider payloads into domain models
+│   ├── cached.py            # Typed cache-first implementation
+│   ├── adapters.py          # Operation-to-provider-schema validators
+│   ├── types.py             # Shared Retrieved[T] result contract
+│   ├── utils.py             # Request, cache-key, TTL, and validation helpers
+│   ├── mapper.py            # Converts provider payloads into domain models
+│   └── schemas/             # Partial Sectors provider response models
 ├── scoring/
-│   ├── broker_flow.py
-│   ├── fundamental.py
-│   └── combined.py
-├── cache/                  # Cache interface, Redis implementation, key/TTL policy
+│   ├── research.py          # Combines scores and returns research metadata
+│   ├── flow.py              # Builds the Flow Score
+│   ├── fundamentals.py      # Builds the Fundamental Score
+│   ├── components.py        # Calculates individual evidence components
+│   └── utils.py             # Shared score aggregation and numeric helpers
+├── cache/                   # Cache interface and Redis implementation
 └── tests/
 ```
+
+The scoring package exposes three calculation steps: flow, fundamentals, and
+their combined result. Component formulas remain small pure functions, while
+the top-level research calculation only coordinates results and metadata.
+Every backend function, including test helpers, annotates every parameter and
+its return type. This makes dependencies and nullable results visible at the
+function boundary and allows static analysis without inferring runtime intent.
 
 ### Backend layer boundaries
 
@@ -132,15 +168,21 @@ IntelFlow intentionally uses three schema categories rather than one shared
 
 | Schema | Location | Used by |
 |---|---|---|
-| Sectors provider payload | `sectors/schemas/` | Sectors client and mapper |
-| Internal domain model | `domain/models/` | Services, scoring, and domain-result cache |
-| Public HTTP request/response | `api/schemas/` | FastAPI routes and frontend contract |
+| Sectors provider payload | `sectors/schemas/` | Sectors gateway and mapper |
+| Internal domain model | `models/` | Services, scoring, and domain-result cache |
+| Public HTTP request/response | `schemas/` | FastAPI routes and frontend contract |
 
 This prevents a field change from Sectors from automatically changing the
 public API. Cache implementations are generic and do not own financial schemas;
 they serialize either a provider payload or a domain result as selected by the
 caller. The frontend keeps generated or handwritten TypeScript types matching
 only the public HTTP schemas.
+
+Files inside `models/` and `schemas/` follow the product section they
+represent. Only strict base records, provenance, and response-envelope fields
+belong in `base.py` or `common.py`. Backend exception classes live in
+`exceptions/` by subsystem rather than inside configuration, services, cache,
+or provider transport modules.
 
 ### Initial backend workflow
 
@@ -155,56 +197,72 @@ For a request such as `GET /api/v1/stocks/BBCA/broker-flow?window=5d`:
 6. Broker scoring functions calculate components and evidence.
 7. Route returns a stable JSON response to the frontend.
 
-## Draft backend HTTP API
+## Backend HTTP contract
 
-These are product-facing IntelFlow endpoints, not direct mirrors of Sectors
-paths. Exact schemas will be defined after response samples are reviewed.
+The product-facing endpoints expose synthesized IntelFlow use cases rather than
+mirror Sectors paths one-for-one. The first contract is:
 
-| Endpoint | Purpose |
+| Endpoint | Scope |
 |---|---|
-| `GET /health` | Process health |
-| `GET /api/v1/stocks/{symbol}/overview` | Identity, three scores, top drivers, and data dates |
-| `GET /api/v1/stocks/{symbol}/broker-flow?window=1d` | Broker accumulation/distribution for a selected window |
-| `GET /api/v1/stocks/{symbol}/foreign-flow?window=20d` | Foreign flow series and summary |
-| `GET /api/v1/stocks/{symbol}/prices?range=3m` | Price and volume series for charting |
-| `GET /api/v1/stocks/{symbol}/shareholders?year=2026` | Monthly shareholder composition and changes |
-| `GET /api/v1/stocks/{symbol}/fundamentals` | Fundamental score, components, periods, and evidence |
+| `GET /health` | Infrastructure health only |
+| `GET /api/v1/stocks/{symbol}/intel-score` | Complete initial IntelScore payload |
+| `GET /api/v1/stocks/{symbol}/flow?window=1d\|5d\|20d` | Window-specific flow evidence |
+| `GET /api/v1/stocks/{symbol}/shareholders?year=YYYY` | Nice-to-have shareholder chart data |
+| `GET /api/v1/stocks/{symbol}/price-history?range=1w\|1m\|3m` | Nice-to-have price/volume series |
+| `GET /api/v1/stocks/{symbol}/broker-series?range=1w\|1m\|3m&brokers=YP,BK` | Nice-to-have selectable broker series |
 
-Example chart response shape:
+The concise living client contract lives in `src/backend/API_CONTRACT.md`.
+Detailed frontend field requirements, call triggers, and Sectors input mapping
+live in `PLAN.md`. Public Pydantic schemas become the executable contract when
+implementation starts; all three must remain synchronized.
 
-```json
-{
-  "symbol": "BBCA",
-  "range": "3m",
-  "as_of": "2026-09-18",
-  "series": [
-    {
-      "date": "2026-09-18",
-      "open": 8000,
-      "high": 8125,
-      "low": 7950,
-      "close": 8075,
-      "volume": 92000000
-    }
-  ]
-}
-```
+The aggregate IntelScore endpoint prevents the browser from coordinating raw
+provider requests. Window-specific flow is separate so changing a tab does not
+reload company fundamentals. Price history and broker series are also separate
+because broker selection changes more often than price history.
 
-The frontend receives numeric values and dates. It decides whether to render a
-line, candlestick, area, or bar chart without changing the underlying data.
+Chart responses contain normalized numeric values, dates, units, and source
+freshness. The frontend chooses line, candlestick, area, or bar presentation
+without changing the underlying data.
+
+For 1-month and 3-month broker series, the backend splits Sectors Broker
+Activity requests into non-overlapping chunks no longer than 14 days, caches
+them independently, merges dates, and filters broker codes locally. The
+frontend never knows about this provider constraint.
 
 ## Frontend responsibilities
+
+The frontend MVP is implemented using Vite, React, TypeScript, React Router,
+TanStack Query, modular Apache ECharts (SVG renderer), and CSS Modules. The npm
+package and lockfile live at the repository root; the Vite root is `src/frontend`.
+Routes are `/`, `/intel-score`, and `/stocks/:symbol/intel-score`. The research
+route is lazy-loaded so Home does not load chart code before navigation.
+
+The browser uses only same-origin `/api/v1/stocks/...` URLs. Vite proxies to the
+local IntelFlow backend on port 8000.
+Production Nginx proxies `/api/` to `backend:8000` and serves the SPA with deep-link
+fallback. No browser configuration includes Sectors credentials or provider URLs.
+
+Query keys include symbol and, for evidence, the window. One initial aggregate
+request supplies scores, fundamentals and 20D evidence. The 1D/5D controls fetch
+only the flow endpoint; returning to 20D reuses the aggregate. Query cancellation
+passes AbortSignal to fetch; data is not carried over between query keys.
+Browser query cache freshness (five minutes) is independent of backend source
+staleness. Retry, focus refetch and reconnect refetch are disabled to avoid
+implicit repeat requests. Missing values remain null and are formatted only.
+
+The running frontend has no synthetic data mode. Unit and browser tests isolate
+the HTTP contract with test-only response data; the normal Compose stack uses
+the backend and its cache. See `docs/FRONTEND.md` for run instructions.
 
 ```text
 src/frontend/
 ├── app/                    # App bootstrapping, routes, and shared layout
 ├── pages/
-│   ├── SearchPage
-│   ├── StockOverviewPage
-│   ├── BrokerFlowPage
-│   ├── PriceChartPage
-│   ├── ShareholdersPage
-│   └── FundamentalsPage
+│   ├── HomePage
+│   ├── IntelScorePage
+│   ├── ShareholderCompositionPage
+│   └── StockchartPage
 ├── features/
 │   ├── symbol-search/
 │   ├── scores/
@@ -220,16 +278,15 @@ src/frontend/
 
 ### Initial pages
 
-1. **Search page** accepts one IDX symbol.
-2. **Stock overview** shows company identity, Flow Score, Fundamental Score,
-   Combined Score, top evidence, and data dates.
-3. **Broker flow page** switches between 1D, 5D, and 20D and shows top
-   accumulation/distribution.
-4. **Price chart page** renders three months of price and volume data.
-5. **Shareholders page** renders monthly local/foreign/category composition and
-   shareholder-count changes.
-6. **Fundamentals page** explains growth, earnings, cash-flow, and valuation
-   components when those fields are available.
+1. **Home** explains IntelFlow, accepts one IDX symbol, and leads into the
+   primary analysis.
+2. **IntelScore — MVP** shows company identity, Flow Score, Fundamental Score,
+   Combined Score, key points, charts, evidence, and data dates.
+3. **Shareholder Composition — nice to have** renders monthly stacked
+   composition and shareholder-count changes.
+4. **Stockchart — nice to have** renders 1-week, 1-month, or 3-month
+   price/volume data with default top-three buyer/seller brokers and optional
+   user-selected broker overlays.
 
 ### Frontend data rules
 
@@ -305,13 +362,14 @@ Initial TTL guidance:
 
 | Data | Draft TTL |
 |---|---:|
-| Current price, broker flow, foreign flow window | 1 hour |
-| Historical date-bounded market/flow window | 30 days |
-| Shareholder composition | 3 days |
+| Current daily price, broker flow, foreign flow window | 6 hours |
+| Date-bounded market/flow window ending more than 7 days ago | 30 days |
+| Shareholder composition for the current year | 7 days |
+| Shareholder composition for prior years | 90 days |
 | Free-float list | 7 days |
 | Company Report: overview or valuation | 12 hours |
-| Company Report: financials, ownership, management, peers | 7 days |
-| Revenue segments | 7 days |
+| Company Report: financials, ownership, management, peers | 14 days |
+| Revenue segments | 30 days |
 
 These TTLs are product defaults, not claims about Sectors update frequency, and
 should be adjusted after observing the actual endpoint refresh behavior. Do not
@@ -321,6 +379,40 @@ far less frequently. Do not cache authentication, validation, rate-limit, or
 unexpected upstream errors.
 Historical score snapshots and a permanent database are deferred until the
 basic analysis flow works.
+
+## Logging and operations
+
+- Application logs go only to stdout. `APP_ENV=development` produces readable
+  colored text on a terminal; `APP_ENV=production` produces JSON lines.
+- Request correlation IDs, route, status, latency, cache outcome, and safe
+  upstream error categories are recorded where relevant. Request logs also
+  include the direct client IP; trusted-proxy configuration is required before
+  interpreting forwarded addresses. Routine `/health` checks are omitted from
+  access logs to avoid container log noise.
+- API keys, authorization headers, credentials, and complete financial-response
+  bodies must never be logged.
+- Container log collection and retention are handled by the runtime; no backend
+  log volume is mounted.
+- Exception logging includes type and stack locations only, avoiding exception
+  values and source-code lines that could reveal credentials or raw payloads.
+
+## Deployment
+
+- The backend and frontend each have their own production-oriented Dockerfile.
+- The root Compose configuration runs frontend, backend, and Redis together and
+  defines health checks and explicit service dependencies.
+- Runtime configuration comes from environment variables. Images must not bake
+  secrets into layers and should use non-root users where practical.
+- Redis uses a named volume. Backend logs go to stdout and the container runtime
+  controls collection and retention.
+
+## Testing expectations
+
+Every service and pure scoring unit requires focused tests for its normal path
+and meaningful edge cases. At minimum these cover invalid symbols/windows,
+missing or nullable provider fields, empty histories, zero denominators,
+insufficient observations, malformed upstream payloads, timeout/rate-limit
+mapping, cache hit/miss/corruption behavior, and partial upstream availability.
 
 ## Nice-to-have AI layer
 
@@ -336,14 +428,19 @@ scoring code.
 
 ## Suggested implementation order
 
-1. Define the minimal Sectors response models in `docs/SCHEMA.md` from the
-   reviewed samples in `output-schema/`.
-2. Implement `CacheStore`, its Redis implementation, canonical keys, and the
-   cached Sectors gateway with tests.
-3. Implement Sectors mappers from provider schemas into domain models.
-4. Implement price, broker-flow, foreign-flow, and shareholder backend routes.
-5. Build the frontend shell, symbol routing, and detail pages using stable or
-   mocked backend JSON.
-6. Finalize and test scoring formulas.
-7. Add the overview endpoint that combines scores and evidence.
-8. Add AI/news research only after the MVP workflow is reliable.
+1. **Backend foundation:** finish minimal provider schemas, cache abstraction,
+   Redis integration, canonical keys, TTL policy, structured console logs,
+   the exception registry, and their tests.
+2. **Backend IntelScore:** map the required provider data into domain models,
+   finalize and test deterministic scoring, define the reviewed HTTP contract,
+   and implement the IntelScore application service and route.
+3. **Backend packaging:** add the backend Dockerfile, health checks, environment
+   configuration, and Compose integration with Redis.
+4. **Frontend boilerplate:** build the shared layout, sidebar, Home, symbol
+   routing, IntelScore page structure, API client boundary, states, and mocked
+   data before wiring the stable contract.
+5. **Frontend integration:** connect IntelScore to the backend, implement charts
+   and key points, and verify responsive, loading, stale, partial, and error
+   states.
+6. **Refinement:** add Shareholder Composition and Stockchart only if the MVP is
+   reliable, then consider AI/news research and other enhancements.
