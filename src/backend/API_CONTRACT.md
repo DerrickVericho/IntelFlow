@@ -167,3 +167,5 @@ gap. Incomplete chunks are reported and never silently treated as zero.
 Useful partial results return 200. Raw upstream errors, validation payloads,
 credentials and API keys are never returned. `X-Request-ID` matches the error
 and log correlation ID. CORS origins are configured through `CORS_ORIGINS`.
+Sectors and cache failures use fixed public messages; their exception messages
+and provider details are never copied into the HTTP response.

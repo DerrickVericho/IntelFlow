@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Status | Draft hypothesis |
-| Version | 0.1 |
-| Last updated | 2026-09-20 |
+| Status | Implemented draft hypothesis; calibration pending |
+| Version | draft-v0.2 |
+| Last updated | 2026-09-25 |
 
 This document defines the scoring model separately from the product PRD. The
 weights and thresholds are provisional and must be validated against sample
@@ -38,7 +38,7 @@ Candidate evidence:
   inflow, percentage of positive-flow days, and foreign share of turnover.
 - **Broker accumulation / distribution (40%)**: net buy/sell value from the
   ranked top 3, top 5, and top 10 brokers. Score both direction and agreement
-  across these windows; broad positive net buying scores higher than a
+  across these ranked slices; stronger buyer-side concentration scores higher than a
   conflicting or distribution-dominated result.
 
 Interpretation rule: broker origin is not investor origin. A foreign broker does
@@ -57,19 +57,21 @@ Fundamental Support Score =
 Candidate evidence:
 
 - **Growth (30%)**: year-over-year quarterly revenue and earnings growth,
-  plus consistency across available periods.
-- **Earnings quality (25%)**: revenue versus earnings divergence, margin and
-  ratio trends, and recurring earnings behavior where the reports support it.
-- **Cash-flow quality (25%)**: operating cash flow, free-cash-flow proxy, and
-  the relationship between cash generation and reported earnings, subject to
-  available statement fields.
-- **Valuation (20%)**: PE, PB, PS, dividend yield, payout ratio, and available
-  historical or peer context. Peer comparison is allowed only after checking
-  that peers are economically comparable; API classification is a starting
-  point, not proof.
+  plus annual revenue, earnings, and EPS direction across available periods.
+- **Earnings quality (25%)**: positive earnings, revenue-versus-earnings
+  divergence, and company-level net/operating margin, ROA, and ROE trends.
+- **Cash-flow quality (25%)**: positive operating cash flow and free cash flow,
+  plus operating-cash-flow-to-earnings conversion. Capital expenditure is
+  retained as context, not rewarded or penalized on its own.
+- **Valuation (20%)**: positive and meaningful PE, PB, PS, and PCF compared with
+  the company's own history and available provider peer averages. Forward PE
+  is optional context. A negative or zero denominator is unavailable evidence,
+  never an automatic "cheap" signal.
 
-The calculation must support sector-aware inputs. Banks should use the relevant
-financial-sector fields instead of forcing non-financial metrics.
+The initial model deliberately uses a shallow cross-sector subset. Missing or
+economically meaningless metrics are omitted from the applicable calculation,
+never converted to zero. Sector-specific accounting models and business-segment
+profitability are deferred beyond the MVP.
 
 ### Combined Conviction Score
 
@@ -100,3 +102,77 @@ The state is explanatory. It never replaces numeric scores.
 3. Check whether the scores match inspectable underlying evidence.
 4. Test stale data, missing segments, and bank/non-bank behavior.
 5. Version formula changes and lock a version before final demo recording.
+
+## Implemented normalization — draft-v0.2
+
+The original weights remain unchanged. The implementation has three public
+calculation steps:
+
+1. `calculate_flow_score()` builds the Flow Score.
+2. `calculate_fundamental_score()` builds the Fundamental Score.
+3. `calculate()` combines both scores and adds the research state and metadata.
+
+These functions live in `src/backend/scoring/flow.py`,
+`src/backend/scoring/fundamentals.py`, and
+`src/backend/scoring/research.py`. Individual component formulas live in
+`src/backend/scoring/components.py`; shared score aggregation lives in
+`src/backend/scoring/utils.py`. This separation changes code ownership only,
+not the formula, weights, thresholds, or `draft-v0.2` version. All scores are
+clipped to [0, 100], rounded to two decimals; calculations use dated evidence
+rather than an LLM.
+
+### Flow
+
+The IntelScore score always uses the last 20 observed trading dates. Tabs only
+change the evidence window. Daily data supplies up to 90 calendar days, with
+20 preceding observations needed for each volume baseline.
+
+- Liquidity: mean of `clip(50 * volume / preceding_20_observation_mean)` over
+  the selected observations. The plotted day is excluded from its baseline.
+  A zero baseline or fewer than 20 preceding observations is unavailable.
+- Foreign: 70% of `clip(50 + 50 * net / (buy + sell))` plus 30% of
+  `100 * positive_flow_days / observed_days`. Require positive foreign turnover.
+  Foreign share is displayed as context; it is not a separate score factor.
+- Broker: for each N in 3, 5, 10, sum signed net values of the top N net buyers
+  and top N net sellers separately. Compute
+  `balance = (buyer_net + seller_net) / (abs(buyer_net) + abs(seller_net))`.
+  Average `clip(50 + 50 * balance)` across slices with N buyers and N sellers.
+  Zero denominators are unavailable. This measures concentration asymmetry;
+  it is not the net flow of the whole market, which balances across all brokers.
+
+All three flow components and complete selected-date coverage are required for
+the aggregate Flow Score. Any incomplete baseline, missing foreign dates, or
+shorter-than-20 research window leaves the aggregate null; charts and component
+evidence remain inspectable.
+
+### Fundamentals
+
+- Growth: average `clip(50 + annual_YoY_percentage_points)` for revenue and
+  earnings. Require consecutive years and a positive prior denominator.
+  Undated quarterly YoY snapshots are displayed only, not scored.
+- Earnings: for earnings, net/operating margin, ROA and ROE, level scores are
+  100/50/0 for positive/zero/negative. Where consecutive years and a nonzero
+  prior value exist, average the level score with
+  `clip(50 + 50 * (latest - prior) / abs(prior))`. Then average available metrics.
+- Cash flow: average 100/50/0 for positive/zero/negative OCF and FCF, plus
+  `clip(50 * OCF / earnings)` when earnings are positive. Capex is context only.
+- Valuation: for each positive PE/PB/PS/PCF, compare latest against the median
+  of at least two earlier positive annual ratios:
+  `clip(50 + 50 * (median - latest) / median)`. Require positive latest annual
+  earnings/equity/revenue/OCF respectively; that statement must be no more than
+  one year behind the valuation year and must not be from a later year.
+  Provider peer averages are context only. Average eligible ratios.
+
+Require at least two fundamental components. Available component weights are
+renormalized; original weights and unavailable components remain visible.
+The component `reason` describes missing evidence; missing values never become
+zero. Combined Score requires both aggregates, using the unchanged 60/40 weights.
+
+### Limits to validate before demo
+
+These normalizations are transparent first-pass hypotheses, not calibrated
+predictors. More trading activity can accompany distribution, and positive
+cash flow has different significance across sectors. A positive annual
+denominator is a conservative check, not verification of the exact provider
+valuation denominator (which may use a trailing period). Compare representative
+tickers before declaring the scoring version final. No confidence score is added.

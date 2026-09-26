@@ -43,37 +43,44 @@ receiving a buy/sell recommendation.
 
 ## Core experience
 
-1. User searches an IDX ticker.
-2. Product retrieves Sectors data for that symbol across multiple time windows.
-3. User sees Flow Score, Fundamental Score, Combined Score, and the main
+1. User opens a home page that explains IntelFlow's flow-first thesis.
+2. User searches one IDX ticker and enters its IntelScore research page.
+3. Product retrieves and synthesizes dated Sectors data for that symbol.
+4. User sees Flow Score, Fundamental Score, Combined Score, key points, and the
    evidence behind each result.
-4. User explores broker accumulation/distribution, foreign flow, and
-   shareholder-composition changes for 1-day, 5-day, 20-day, and other
-   supported ranges.
-5. User navigates from the stock overview to dedicated chart, shareholder, and
-   broker-analysis pages.
+5. If the nice-to-have modules are available, the same symbol can be explored
+   in dedicated Shareholder Composition and Stockchart pages.
 
 ## Must have
 
+- Home page with a concise product overview, thesis, symbol search, and a clear
+  path into IntelScore.
+- Persistent navigation with Home and IntelScore. Nice-to-have pages may be
+  visible only when they are implemented and usable.
 - Ticker search and validation.
+- A symbol-first IntelScore research page with analysis, charts, dated evidence,
+  and key points.
 - Broker Flow Score: 0–100.
 - Fundamental Support Score: 0–100.
 - Combined Conviction Score: 0–100.
 - Independent score breakdowns and evidence.
 - Data freshness indicators.
-- Broker accumulation/distribution views for 1-day, 5-day, and 20-day ranges.
-- Foreign-flow view for the selected symbol.
-- Historical shareholder-composition view and shareholder-count change.
-- Dedicated chart page with a three-month price/volume chart.
-- Dedicated shareholder page with a monthly shareholder-composition bar chart.
-- Dedicated broker-flow page.
+- Broker accumulation/distribution, foreign-flow, and liquidity evidence within
+  IntelScore for the supported analysis windows.
+- Fundamental evidence covering the shallow cross-sector metrics defined in
+  `SCORING.md`.
 - Non-advisory disclaimer.
 - Cache/API-credit controls.
 
 ## Nice to have
 
-- Broker and foreign-flow timeline overlays.
-- Advanced shareholder-composition analysis.
+- Shareholder Composition page with a monthly stacked bar chart and
+  shareholder-count changes for the selected symbol.
+- Stockchart page with 1-week, 1-month, and 3-month ranges, price/volume data,
+  default top-three buyer and seller broker overlays, and user-selectable
+  brokers.
+- Additional broker and foreign-flow timeline overlays.
+- Advanced shareholder-composition analysis and filters.
 - Revenue-segment visualization.
 - User-selected peer comparison.
 - User-adjustable Flow/Fundamental combined-score weights.
@@ -89,6 +96,7 @@ receiving a buy/sell recommendation.
 - Technical-analysis indicators.
 - Market-wide screener, IPO analysis, or daily top-gainer/loser analysis.
 - Claiming a broker code identifies a particular investor or "smart money."
+- Sector-specific accounting models and segment-level profitability analysis.
 
 ## Data sources
 
@@ -97,10 +105,13 @@ Primary endpoint contracts and credit costs are maintained in
 
 - broker activity and top buyers/sellers;
 - foreign flow;
-- company report sections for fundamentals, ownership, and peers;
-- company revenue/cost segments;
-- shareholder composition; and
-- daily price, volume, and market-cap data.
+- daily price and volume data for liquidity and market context; and
+- company report `financials` and `valuation` sections for a shallow,
+  cross-sector fundamental check.
+
+Shareholder composition, company revenue segments, ownership details, and peer
+analysis remain nice-to-have inputs and are not required by the initial
+IntelScore workflow.
 
 ## AI and news guardrails
 
@@ -116,9 +127,10 @@ Primary endpoint contracts and credit costs are maintained in
 ## Success criteria
 
 - A judge can understand the two-score thesis quickly.
-- An IDX ticker can be analyzed end to end during the demo.
-- A user can inspect accumulation/distribution and shareholder changes across
-  the supported time ranges for one symbol.
+- A judge can complete the flow from home-page symbol search to a complete
+  IntelScore result for one IDX ticker during the demo.
+- A user can inspect the most important flow and fundamental evidence without
+  leaving the IntelScore page.
 - Every displayed score is traceable to dated evidence.
 - Sectors is clearly essential to the product.
 - If AI/news research is demoed, it returns working citations and no fabricated
@@ -127,8 +139,8 @@ Primary endpoint contracts and credit costs are maintained in
 ## Open questions
 
 - Which initial observation windows and score thresholds are most useful?
-- Which fundamental metrics are consistently available for demo tickers?
-- How should the product handle bank versus non-bank metrics?
+- Which minimum fundamental metrics are consistently available for demo
+  tickers across sectors?
 - Which tickers will be used as validation and demo cases?
 
 Detailed formula, normalization, and missing-data behavior live in
