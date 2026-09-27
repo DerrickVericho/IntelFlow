@@ -37,6 +37,16 @@ export interface PriceResponse extends Envelope {
   range: '1m' | '3m'; effective_start: string | null; effective_end: string | null; incomplete_history: boolean
   series: { date: string; open: number | null; high: number | null; low: number | null; close: number; volume: number; market_cap: number | null }[]
 }
+export interface ShareholderPoint {
+  date: string; shares_number: number; holdings: Record<string, number | null>
+  total_local: number; total_foreign: number
+  shareholder_count: number | null; shareholder_count_change: number | null
+}
+export interface ShareholderResponse extends Envelope {
+  year: number; supported_years: number[]
+  categories: { key: string; label: string }[]
+  series: ShareholderPoint[]
+}
 export interface Research extends FlowResponse {
   company: { name: string | null; sector: string | null; sub_sector: string | null; last_close_idr: number | null; close_date: string | null; previous_close_idr: number | null; previous_close_date: string | null; change_idr: number | null; change_percent: number | null }
   scores: {

@@ -121,6 +121,41 @@ def test_shareholders_response_contract(client: TestClient) -> None:
     assert "individual_f" in body["series"][0]["holdings"]
 
 
+def test_shareholder_year_without_dataset_returns_empty_contract(
+    client: TestClient, harness: Harness
+) -> None:
+    harness.transport.failures["get_shareholder_composition"] = SectorsNotFoundError(
+        "private provider detail"
+    )
+    response = client.get("/api/v1/stocks/TEST/shareholders?year=2025")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["year"] == 2025
+    assert body["series"] == []
+    assert body["status"] == "partial"
+    assert "private provider detail" not in response.text
+
+
+def test_historical_null_shareholder_count_is_public_null(
+    client: TestClient, harness: Harness
+) -> None:
+    original = harness.transport._get_shareholder_composition
+
+    def with_missing_counts(year: int) -> dict:
+        payload = original(year)
+        payload["data"][0]["numbers_of_shareholders"] = None
+        payload["data"][0]["change_in_shareholders"] = None
+        return payload
+
+    harness.transport._get_shareholder_composition = with_missing_counts
+    response = client.get("/api/v1/stocks/TEST/shareholders?year=2025")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["series"][0]["shareholder_count"] is None
+    assert body["series"][0]["shareholder_count_change"] is None
+    assert body["series"][0]["holdings"]["individual_l"] == 100
+
+
 def test_broker_series_response_contract(client: TestClient) -> None:
     response = client.get("/api/v1/stocks/TEST/broker-series?range=1w&brokers=B0")
     assert response.status_code == 200, response.text

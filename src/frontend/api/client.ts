@@ -1,4 +1,4 @@
-import type { FlowResponse, PriceResponse, Research, Window } from '../types/research'
+import type { FlowResponse, PriceResponse, Research, ShareholderResponse, Window } from '../types/research'
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public requestId?: string) { super(message) }
@@ -36,6 +36,17 @@ export async function getPriceHistory(symbol: string, range: '1m' | '3m', signal
   const data = await get<PriceResponse>(`${encodeURIComponent(symbol)}/price-history?range=${range}`, signal)
   if (data.symbol !== symbol || data.range !== range || !Array.isArray(data.series) || data.series.some(point => !/^\d{4}-\d{2}-\d{2}$/.test(point.date) || !Number.isFinite(point.close))) {
     throw new ApiError(502, 'INVALID_RESPONSE', 'The backend returned unreadable or mismatched price history.')
+  }
+  return data
+}
+export async function getShareholders(symbol: string, year: number, signal: AbortSignal) {
+  const data = await get<ShareholderResponse>(`${encodeURIComponent(symbol)}/shareholders?year=${year}`, signal)
+  if (data.symbol !== symbol || data.year !== year || !Array.isArray(data.series) || !Array.isArray(data.categories)
+    || data.series.some(point => !/^\d{4}-\d{2}-\d{2}$/.test(point.date) || !point.date.startsWith(`${year}-`)
+      || !point.holdings || typeof point.holdings !== 'object' || !Number.isFinite(point.shares_number)
+      || (point.shareholder_count !== null && !Number.isFinite(point.shareholder_count))
+      || (point.shareholder_count_change !== null && !Number.isFinite(point.shareholder_count_change)))) {
+    throw new ApiError(502, 'INVALID_RESPONSE', 'The backend returned unreadable or mismatched shareholder data.')
   }
   return data
 }

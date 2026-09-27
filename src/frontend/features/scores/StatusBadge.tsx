@@ -7,9 +7,6 @@ export const bandStyle: Record<Band, string> = {
   Weak: 'text-negative bg-negative-soft border-negative/40',
   Unavailable: 'text-muted bg-raised border-control',
 }
-export const bandFill: Record<Band, string> = {
-  Strong: 'bg-positive', Positive: 'bg-accent', Neutral: 'bg-caution', Weak: 'bg-negative', Unavailable: 'bg-control',
-}
 export function StatusBadge({ band }: { band: Band }) {
   return <span className={`inline-flex items-center rounded-lg border px-3 py-1 text-sm font-semibold ${bandStyle[band]}`}>{band}</span>
 }

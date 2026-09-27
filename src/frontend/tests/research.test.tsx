@@ -45,6 +45,7 @@ test('Home exact symbol navigation makes one aggregate request and shows backend
   await user.type(screen.getByRole('textbox', { name: 'IDX symbol' }), ' bbca.jk ')
   await user.click(screen.getByRole('button', { name: 'Open IntelScore' }))
   await screen.findByText('Test response company')
+  expect(screen.getByRole('link', { name: 'Shareholders' })).toHaveAttribute('href', '/shareholders')
   expect(fetcher).toHaveBeenCalledTimes(2)
   expect(fetcher.mock.calls[0]).toEqual(expect.arrayContaining(['/api/v1/stocks/BBCA/intel-score']))
   for (const key of ['flow', 'fundamental', 'combined'] as const) expect(screen.getByTestId(`score-${key}`)).toHaveTextContent(String(testResponse.scores[key].value))
@@ -92,6 +93,32 @@ test('partial and stale are simultaneous, unavailable score never becomes zero',
   expect(screen.getByText('Not calculated')).toBeInTheDocument()
   expect(screen.queryByText('Data availability details (1)')).not.toBeInTheDocument()
   expect(document.querySelector('details')).toBeNull()
+})
+
+test('a partial foreign date keeps numeric Flow and Overall scores with low confidence', async () => {
+  const data = structuredClone(testResponse) as Research
+  data.status = 'partial'
+  data.flow.foreign_flow.series = data.flow.foreign_flow.series.slice(1)
+  data.missing_inputs = [{ key: 'foreign_flow', reason: 'One date not reported' }]
+  data.scores.flow.reason = 'Partial coverage: foreign flow covers 19 of 20 dates.'
+  data.scores.combined.reason = 'Includes a Flow Score with partial coverage.'
+  mockApi(data); mount()
+  await screen.findByText('Test response company')
+  expect(screen.getByTestId('score-flow')).toHaveTextContent(String(data.scores.flow.value))
+  expect(screen.getByTestId('score-combined')).toHaveTextContent(String(data.scores.combined.value))
+  expect(screen.getByTestId('data-confidence')).toHaveTextContent('Low')
+  expect(screen.getAllByText(/overall score uses the available observations/).length).toBeGreaterThan(0)
+  expect(screen.queryByText(/full Flow Score cannot be calculated/)).not.toBeInTheDocument()
+})
+
+test('a zero component keeps its colored marker and numeric zero', async () => {
+  const data = structuredClone(testResponse) as Research
+  data.scores.fundamental.components.find(component => component.key === 'cash_flow')!.value = 0
+  mockApi(data); mount()
+  await screen.findByText('Test response company')
+  const meter = within(screen.getByRole('article', { name: 'Fundamental Score' })).getByRole('meter', { name: 'Cash flow score' })
+  expect(meter).toHaveAttribute('aria-valuenow', '0')
+  expect(meter.firstElementChild).toHaveClass('score-meter-fill', 'min-w-[4px]')
 })
 
 test('empty sections and undated quarterly snapshots have explicit states', async () => {

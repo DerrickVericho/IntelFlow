@@ -20,12 +20,15 @@ export function useChartTheme() {
   }
   return { chartColors, chartBase }
 }
-export function Chart({ option, label, height = 240 }: { option: ChartOption; label: string; height?: number }) {
+export function Chart({ option, label, height = 240, onItemClick }: { option: ChartOption; label: string; height?: number; onItemClick?: (index: number) => void }) {
   const element = useRef<HTMLDivElement>(null)
   const chart = useRef<EChartsType | null>(null)
+  const clickHandler = useRef(onItemClick)
+  useEffect(() => { clickHandler.current = onItemClick }, [onItemClick])
   useEffect(() => {
     const instance = init(element.current!, undefined, { renderer: 'svg' })
     chart.current = instance
+    instance.on('click', params => { if (typeof params.dataIndex === 'number') clickHandler.current?.(params.dataIndex) })
     const observer = new ResizeObserver(() => instance.resize())
     observer.observe(element.current!)
     return () => { observer.disconnect(); instance.dispose(); chart.current = null }

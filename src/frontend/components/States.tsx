@@ -28,6 +28,7 @@ function availability(items: Envelope['missing_inputs']) {
     const group = item.key.startsWith('scores.') ? 'Scores'
       : item.key.startsWith('fundamentals.') || item.key.startsWith('company_financial') || item.key === 'company_valuation' ? 'Fundamentals'
       : item.key === 'company_overview' ? 'Company overview'
+      : item.key === 'shareholders.count' ? 'Shareholder count'
       : item.key === 'foreign_flow' ? 'Foreign flow'
       : item.key.startsWith('liquidity') ? 'Volume history'
       : item.key === 'broker_top' ? 'Broker activity'
@@ -40,11 +41,12 @@ function availability(items: Envelope['missing_inputs']) {
   return Array.from(groups, ([name, metrics]) => ({ name, description: metrics.size
     ? `Unavailable: ${Array.from(metrics).join(', ')}. Other reported metrics remain available.`
     : name === 'Scores' ? 'One or more scores need additional evidence. Each affected score explains what is missing.'
-    : name === 'Foreign flow' ? 'Foreign investor data is unavailable or does not cover every trading date. The full Flow Score cannot be calculated.'
+    : name === 'Foreign flow' ? 'Foreign investor data is unavailable or does not cover every trading date. Check the Flow Score coverage note.'
     : name === 'Volume history' ? 'Some trading dates lack the earlier volume history needed for a complete Flow Score.'
     : name === 'Broker activity' ? 'Broker rankings are unavailable for the selected dates.'
     : name === 'Trading history' ? 'Fewer trading observations are available than the selected period requires.'
     : name === 'Company overview' ? 'Company details are unavailable. Available trading evidence is shown below.'
+    : name === 'Shareholder count' ? 'Some monthly counts or changes were not reported. Available category holdings remain visible.'
     : 'Some reported values are unavailable.' }))
 }
 export function DataStatus({ data }: { data: Envelope }) {

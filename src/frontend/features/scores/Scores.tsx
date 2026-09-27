@@ -1,7 +1,7 @@
 import type { Research, Score } from '../../types/research'
 import { number, date } from '../../utils/format'
 import { componentInfo, componentName, researchSummary, scoreBand } from './interpretation'
-import { StatusBadge, bandFill } from './StatusBadge'
+import { StatusBadge } from './StatusBadge'
 
 function Components({ score }: { score: Score }) {
   return <ul className="space-y-4">{score.components.map(component => {
@@ -9,8 +9,8 @@ function Components({ score }: { score: Score }) {
     return <li key={component.key} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5">
       <div className="flex flex-wrap items-baseline gap-x-3"><span className="font-medium">{componentName(component.key)}</span><span className="text-sm text-muted">{number(component.weight)}% weight</span></div>
       <span className="whitespace-nowrap text-base font-semibold tabular-nums">{component.value === null ? 'N/A' : <>{number(component.value, 1)}<span className="text-sm font-normal text-muted"> / 100</span></>}</span>
-      <div className="flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised" role={component.value === null ? "img" : "meter"} aria-label={`${componentName(component.key)} score`} aria-valuemin={component.value === null ? undefined : 0} aria-valuemax={component.value === null ? undefined : 100} aria-valuenow={component.value ?? undefined} aria-valuetext={component.value === null ? 'Unavailable' : `${number(component.value, 1)} out of 100, ${band}`}>
-        {component.value !== null && <div className={`h-full rounded-full ${bandFill[band]}`} style={{ width: `${component.value}%` }} />}
+      <div className="flex items-center gap-3"><div className="score-meter-track h-2 flex-1 overflow-hidden rounded-full" role={component.value === null ? "img" : "meter"} aria-label={`${componentName(component.key)} score`} aria-valuemin={component.value === null ? undefined : 0} aria-valuemax={component.value === null ? undefined : 100} aria-valuenow={component.value ?? undefined} aria-valuetext={component.value === null ? 'Unavailable' : `${number(component.value, 1)} out of 100, ${band}`}>
+        {component.value !== null && <div className="score-meter-fill h-full min-w-[4px] rounded-full" style={{ width: `${component.value}%` }} />}
       </div></div><span className="text-right text-sm text-muted">{band}</span>
       <p className="col-span-2 text-sm text-muted">{componentInfo[component.key]?.help}</p>
       {component.reason && <p className="col-span-2 text-sm text-caution">{component.reason}</p>}
@@ -23,7 +23,7 @@ export function Scores({ data }: { data: Research }) {
   const summary = researchSummary(data)
   return <section aria-label="Research scores" className="space-y-4">
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]" data-testid="score-layout">
-      <article aria-label="Overall Score" className="flex min-w-0 flex-col rounded-2xl border border-accent/40 bg-surface p-5 sm:p-7 xl:row-span-2">
+      <article aria-label="Overall Score" className="flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-5 sm:p-7 xl:row-span-2">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl">Overall Score</h2><span className="text-sm text-muted">Combined</span></div>
         <div className="mt-5 flex flex-wrap items-center gap-5"><div className="text-[clamp(3.5rem,5vw,5rem)] font-semibold leading-none tracking-tight tabular-nums" data-testid="score-combined">{scores.combined.value === null ? 'N/A' : number(scores.combined.value)}{scores.combined.value !== null && <span className="ml-2 text-xl font-normal text-muted">/ 100</span>}</div><StatusBadge band={summary.band} /></div>
         <h3 className="mt-5 text-2xl leading-snug">Overall view: {summary.band}{summary.band === 'Neutral' ? ' / Watch' : ''}</h3>

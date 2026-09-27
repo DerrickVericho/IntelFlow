@@ -16,8 +16,8 @@ export const componentInfo: Record<string, { name: string; help: string }> = {
   broker_flow: { name: 'Broker flow', help: 'Buyer versus seller concentration across ranked brokers.' },
   growth: { name: 'Growth', help: 'Annual revenue and earnings growth.' },
   earnings: { name: 'Earnings', help: 'Profitability, margins, and returns on assets and equity.' },
-  cash_flow: { name: 'Cash flow', help: 'Operating cash, free cash flow, and earnings conversion.' },
-  valuation: { name: 'Valuation', help: 'Eligible valuation ratios relative to company history.' },
+  cash_flow: { name: 'Cash flow', help: 'Available cash flow observations from the latest three financial years.' },
+  valuation: { name: 'Valuation', help: 'Eligible ratios from the latest three years relative to earlier company history.' },
   flow: { name: 'Flow', help: 'Broker activity, foreign participation, and liquidity.' },
   fundamental: { name: 'Fundamental', help: 'Growth, earnings, cash flow, and valuation.' },
 }
@@ -45,8 +45,10 @@ export function researchSummary(data: Research): { band: Band; meaning: string; 
   const strongest = [...available].sort((a, b) => b.value - a.value).slice(0, 2)
   const weakest = [...available].sort((a, b) => a.value - b.value)[0]
   const driver = strongest.length ? `${strongest.every(c => c.value >= 70) ? 'Strong support from' : 'Most support from'} ${strongest.map(describe).join(' and ')}.` : 'No component evidence is available to identify a driver.'
+  const partialFlow = data.missing_inputs.some(item => ['flow.window', 'foreign_flow', 'broker_top', 'liquidity.baseline'].includes(item.key))
   const risk = data.scores.flow.value === null ? 'Flow coverage is incomplete; market participation cannot be confirmed.'
     : data.scores.fundamental.value === null ? 'Fundamental coverage is incomplete; business support cannot be confirmed.'
+    : partialFlow ? 'Flow coverage is partial; the overall score uses the available observations and may change when missing data arrives.'
     : data.status === 'stale' || data.sources.some(source => source.is_stale) ? 'Some source data is stale; current conditions may differ.'
     : weakest ? `${componentName(weakest.key)} ${weakest.value < 50 ? 'is weak' : weakest.value < 60 ? 'has neutral support' : 'provides the least support'} (${number(weakest.value, 1)}/100).`
     : 'Insufficient component evidence to assess the main limitation.'

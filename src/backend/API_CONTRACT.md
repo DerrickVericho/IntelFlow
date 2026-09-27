@@ -54,7 +54,7 @@ Missing values are null, not zero. Percent uses percentage points (12.4 = 12.4%)
 | `flow` | Full chart block described below |
 | `fundamentals` | Four metric groups described below |
 
-Scores use `draft-v0.2`, with exact rules in `docs/SCORING.md`. They are
+Scores use `draft-v0.4`, with exact rules in `docs/SCORING.md`. They are
 research hypotheses awaiting calibration. Scores are calculated on the fixed
 20-observation flow window; changing a flow tab changes evidence only.
 `input_periods` identifies flow start/end, financial year, and valuation year.
@@ -71,10 +71,11 @@ of plain-English strings (empty when no supporting bullets exist). `text`
 remains the summary for backwards compatibility. Sources apply to the summary
 and its bullets. Clients group by category rather than parsing titles or prose.
 
-The Flow aggregate can be null even when all component values are present:
-components describe available observations, while the aggregate requires full
-coverage. Its `reason` now includes the specific coverage failures and missing
-dates where known. The Combined component carries the same explanation.
+The Flow aggregate needs 20 trading dates, all three components, and at least
+16 dated foreign and volume-baseline observations. A score based on 16–19 of
+those dates remains numeric with a partial-coverage reason; lower coverage
+leaves it null even if all component values are present. The Combined Score
+inherits the Flow coverage note. Missing dates remain visible in the reason.
 
 ## Flow chart block
 
@@ -155,11 +156,15 @@ but is excluded from scoring. See scoring documentation for other guardrails.
 | Endpoint | Concrete fields beyond the envelope |
 |---|---|
 | Price history | `range, effective_start, effective_end, incomplete_history, series[]`; point: `date, open, high, low, close, volume, market_cap` (IDR prices, shares volume) |
-| Shareholders | `year, supported_years[], categories[{key,label}], series[]`; point: `date, shares_number, holdings{category: shares}, total_local, total_foreign, shareholder_count, shareholder_count_change` |
+| Shareholders | `year, supported_years[], categories[{key,label}], series[]`; point: `date, shares_number, holdings{category: shares}, total_local, total_foreign, shareholder_count (nullable), shareholder_count_change (nullable)` |
 | Broker series | `range, effective_start, effective_end, incomplete_history, default_brokers[], selected_brokers[], available_brokers[], series[]`; series: `broker_code, points[]`; point: `date, buy_idr, sell_idr, net_idr, cumulative_net_idr` |
 
 Shareholder years are supported from 2021 to the current year; supported years
 are not a promise that a particular symbol has data in all those years.
+Historical composition rows may have null shareholder counts/changes. A missing
+provider shareholder symbol/year dataset returns HTTP 200 with an empty series,
+partial status and a shareholder missing-input reason; other upstream failures
+retain their error response.
 Category keys preserve `_l/_f` origin. Holdings may not cover all issued shares;
 the frontend must not silently normalize them to 100% of issued shares.
 

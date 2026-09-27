@@ -14,7 +14,7 @@ from ..exceptions.research import (
     InvalidYearError,
     ResearchUnavailableError,
 )
-from ..exceptions.sectors import SectorsError
+from ..exceptions.sectors import SectorsError, SectorsNotFoundError
 from ..models.common import MissingInput
 from ..models.flow import FlowEvidence
 from ..models.research import Company, KeyPoint
@@ -295,7 +295,7 @@ class ResearchService:
         financials, valuation = sections["financials"][1], sections["valuation"][1]
         fundamentals = fundamentals_evidence(financials, valuation)
         scores = calculate(response.flow, fundamentals, financials=financials)
-        # Partial observation windows must not produce a full-window flow score.
+        # Keep a dated partial-coverage score when the scoring minimum is met.
         coverage_issues = [
             m
             for m in missing
@@ -310,18 +310,32 @@ class ResearchService:
                 "liquidity.baseline": "Volume baseline",
             }
             coverage_reason = (
-                "Complete coverage is required for the 20-day Flow Score. "
+                "Flow coverage is incomplete. "
                 + " ".join(
                     f"{coverage_labels[m.key]}: {m.reason}" for m in coverage_issues
                 )
             )
-            scores.flow.value = None
-            scores.flow.reason = coverage_reason
-            scores.combined.value = None
-            scores.combined.reason = "Flow score unavailable"
-            scores.combined.components[0].value = None
-            scores.combined.components[0].reason = coverage_reason
-            scores.research_state = "Insufficient evidence"
+            if scores.flow.value is None or any(
+                m.key in {"flow.window", "broker_top"} for m in coverage_issues
+            ):
+                scores.flow.value = None
+                scores.flow.reason = (
+                    "Insufficient coverage for a Flow Score. " + coverage_reason
+                )
+                scores.combined.value = None
+                scores.combined.reason = "Flow score unavailable"
+                scores.combined.components[0].value = None
+                scores.research_state = "Insufficient evidence"
+            else:
+                scores.flow.reason = (
+                    "Partial coverage: score uses available observations. "
+                    + coverage_reason
+                )
+                scores.combined.reason = (
+                    "Includes a Flow Score with partial coverage. "
+                    "Review the Flow Score evidence."
+                )
+            scores.combined.components[0].reason = scores.flow.reason
         for name in ("flow", "fundamental", "combined"):
             score = getattr(scores, name)
             if score.value is None:
@@ -509,8 +523,13 @@ class ResearchService:
         year = year if year is not None else self.today().year
         if not 2021 <= year <= self.today().year:
             raise InvalidYearError("Year must be between 2021 and the current year.")
-        result = await self.gateway.get_shareholder_composition(symbol, year=year)
-        rows = unique_rows([r for r in result.data.data if r.date.year == year])
+        try:
+            result = await self.gateway.get_shareholder_composition(symbol, year=year)
+        except SectorsNotFoundError:
+            # A missing symbol/year dataset is an empty research result, not an
+            # invalid client request. Other provider failures still surface.
+            result = None
+        rows = unique_rows([r for r in result.data.data if r.date.year == year]) if result else []
         categories = (
             [
                 k
@@ -532,25 +551,40 @@ class ResearchService:
             )
             for r in rows
         ]
-        source = source_record(
-            "shareholders",
-            result,
-            today=self.today(),
-            as_of=rows[-1].date if rows else None,
-            max_age=75,
+        source = (
+            source_record(
+                "shareholders",
+                result,
+                today=self.today(),
+                as_of=rows[-1].date if rows else None,
+                max_age=75,
+            )
+            if result
+            else None
         )
-        if year < self.today().year:
+        if source and year < self.today().year:
             source.is_stale = False
         missing = (
             []
             if rows
-            else [MissingInput(key="shareholders", reason="No snapshots in this year")]
+            else [MissingInput(key="shareholders", reason="No shareholder snapshots for this symbol and year")]
         )
+        if rows and any(
+            row.numbers_of_shareholders is None
+            or row.change_in_shareholders is None
+            for row in rows
+        ):
+            missing.append(
+                MissingInput(
+                    key="shareholders.count",
+                    reason="Some monthly shareholder counts or changes were not reported",
+                )
+            )
         return ShareholderResponse(
             symbol=symbol,
-            as_of=source.as_of,
-            status=research_status(missing, [source]),
-            sources=[source],
+            as_of=source.as_of if source else None,
+            status=research_status(missing, [source] if source else []),
+            sources=[source] if source else [],
             missing_inputs=missing,
             year=year,
             supported_years=list(range(2021, self.today().year + 1)),

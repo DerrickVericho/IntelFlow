@@ -629,7 +629,7 @@
       "reason": null
     },
     "fundamental": {
-      "value": 69.82,
+      "value": 70.0,
       "components": [
         {
           "key": "growth",
@@ -651,7 +651,7 @@
         },
         {
           "key": "cash_flow",
-          "value": 71.67,
+          "value": 73.19,
           "weight": 25.0,
           "reason": null,
           "source_keys": [
@@ -660,7 +660,7 @@
         },
         {
           "key": "valuation",
-          "value": 51.69,
+          "value": 50.7,
           "weight": 20.0,
           "reason": null,
           "source_keys": [
@@ -671,7 +671,7 @@
       "reason": null
     },
     "combined": {
-      "value": 67.39,
+      "value": 67.46,
       "components": [
         {
           "key": "flow",
@@ -682,7 +682,7 @@
         },
         {
           "key": "fundamental",
-          "value": 69.82,
+          "value": 70.0,
           "weight": 40.0,
           "reason": null,
           "source_keys": []
@@ -690,7 +690,7 @@
       ],
       "reason": null
     },
-    "calculation_version": "draft-v0.2",
+    "calculation_version": "draft-v0.4",
     "calculated_at": "2026-09-26T03:57:38.786147Z",
     "input_periods": {
       "flow_start": "2026-08-26",
@@ -745,8 +745,8 @@
       "items": [
         "Growth: 75.00 / 100.",
         "Earnings: 76.25 / 100.",
-        "Cash Flow: 71.67 / 100.",
-        "Valuation: 51.69 / 100."
+        "Cash Flow: 73.19 / 100.",
+        "Valuation: 50.70 / 100."
       ],
       "source_keys": [
         "company_overview",
@@ -1086,7 +1086,7 @@
       {
         "key": "cash_flow",
         "label": "Cash Flow",
-        "score": 71.67,
+        "score": 73.19,
         "metrics": [
           {
             "key": "operating_cash_flow",
@@ -1221,7 +1221,7 @@
       {
         "key": "valuation",
         "label": "Valuation",
-        "score": 51.69,
+        "score": 50.7,
         "metrics": [
           {
             "key": "pe",

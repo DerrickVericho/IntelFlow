@@ -13,7 +13,7 @@ function apply(value: ThemePreference) {
   root.dataset.themePreference = value
   root.dataset.theme = resolve(value)
   root.style.colorScheme = root.dataset.theme === 'light' ? 'only light' : 'dark'
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', root.dataset.theme === 'dark' ? '#0c111a' : '#f7f7f8')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', root.dataset.theme === 'dark' ? '#0b192b' : '#edf3fa')
   listeners.forEach(listener => listener())
 }
 

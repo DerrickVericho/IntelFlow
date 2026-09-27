@@ -121,7 +121,7 @@ test('themes preserve research state, recolor charts, and survive reload', async
   await page.goto('/stocks/BBCA/intel-score')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'light only')
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 247, 248)')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(237, 243, 250)')
   await expect(page.getByText('Test response company')).toBeVisible()
   await expect(page.getByText('Up +1 (+0.09%)')).toBeVisible()
   const chart = page.getByRole('img', { name: /brokers paired by rank/ })
@@ -144,7 +144,7 @@ test('themes preserve research state, recolor charts, and survive reload', async
   await expect(page.getByText('5 observed trading days')).toBeVisible()
   await page.getByRole('combobox', { name: 'Color theme' }).selectOption('dark')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(12, 17, 26)')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(11, 25, 43)')
   await expect(chart.locator('text').filter({ hasText: /^B0$/ })).toHaveAttribute('fill', '#edf1f8')
   await expect(chart.locator('text').filter({ hasText: /^B0$/ })).toHaveCSS('fill', 'rgb(237, 241, 248)')
   await expect(page.getByRole('article', { name: 'Flow Score' }).getByText('Liquidity', { exact: false }).first()).toBeVisible()
@@ -166,7 +166,7 @@ test('themes preserve research state, recolor charts, and survive reload', async
   await page.screenshot({ path: testInfo.outputPath('research-mobile-dark.png'), fullPage: true })
   await page.getByRole('combobox', { name: 'Color theme' }).selectOption('light')
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'light only')
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 247, 248)')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(237, 243, 250)')
   await expect(chart.locator('text').filter({ hasText: /^B0$/ })).toHaveAttribute('fill', '#243247')
   await expect(chart.locator('text').filter({ hasText: /^B0$/ })).toHaveCSS('fill', 'rgb(36, 50, 71)')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -293,6 +293,46 @@ test('score text has readable contrast and labels in both themes', async ({ page
     expect(failures).toEqual([])
     await expect(page.getByRole('meter', { name: 'Foreign flow score' })).toHaveAttribute('aria-valuetext', /Strong/)
     await page.getByRole('region', { name: 'Research scores' }).screenshot({ path: testInfo.outputPath(`decision-scores-${theme}.png`) })
+  }
+})
+
+test('every numeric component has a visible bar in light and dark themes', async ({ page }) => {
+  const response = structuredClone(testResponse)
+  const flowValues = [0, 55, 65]
+  const fundamentalValues = [75, 62.7, null, 100]
+  response.scores.flow.components.forEach((component: { value: number | null }, index: number) => { component.value = flowValues[index] })
+  response.scores.fundamental.components.forEach((component: { value: number | null }, index: number) => { component.value = fundamentalValues[index] })
+  await page.route('**/api/v1/stocks/BBCA/intel-score', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) }))
+  await page.goto('/stocks/BBCA/intel-score')
+  const scores = page.getByRole('region', { name: 'Research scores' })
+  await expect(scores.getByRole('meter', { name: 'Earnings score' })).toHaveAttribute('aria-valuenow', '62.7')
+  await expect(scores.getByRole('img', { name: 'Cash flow score' })).toHaveAttribute('aria-valuetext', 'Unavailable')
+
+  for (const theme of ['light', 'dark']) {
+    await page.getByRole('combobox', { name: 'Color theme' }).selectOption(theme)
+    const expectedFill = theme === 'light' ? 'rgb(36, 89, 181)' : 'rgb(156, 191, 255)'
+    const bars = await scores.getByRole('meter').evaluateAll(nodes => nodes.map(node => {
+      const fill = node.firstElementChild as HTMLElement
+      const track = node as HTMLElement
+      return {
+        value: Number(node.getAttribute('aria-valuenow')),
+        band: node.getAttribute('aria-valuetext'),
+        fillColor: getComputedStyle(fill).backgroundColor,
+        trackColor: getComputedStyle(track).backgroundColor,
+        width: fill.getBoundingClientRect().width,
+        trackWidth: track.getBoundingClientRect().width,
+        height: fill.getBoundingClientRect().height,
+      }
+    }))
+    expect(bars).toHaveLength(6)
+    for (const bar of bars) {
+      expect(bar.fillColor, bar.band ?? undefined).toBe(expectedFill)
+      expect(bar.fillColor, bar.band ?? undefined).not.toBe(bar.trackColor)
+      expect(bar.fillColor, bar.band ?? undefined).not.toBe('rgba(0, 0, 0, 0)')
+      expect(bar.height, bar.band ?? undefined).toBeGreaterThan(0)
+      expect(bar.width, bar.band ?? undefined).toBeGreaterThanOrEqual(4)
+      if (bar.value > 0) expect(bar.width / bar.trackWidth).toBeCloseTo(bar.value / 100, 1)
+    }
   }
 })
 

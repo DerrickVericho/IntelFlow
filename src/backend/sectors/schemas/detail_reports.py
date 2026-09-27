@@ -46,8 +46,8 @@ class ShareholderDetail(BaseModel):
     foundation_f: int
     other_f: int
     total_f: int
-    numbers_of_shareholders: int
-    change_in_shareholders: int
+    numbers_of_shareholders: int | None
+    change_in_shareholders: int | None
 
 
 class ShareholderList(BaseModel):
