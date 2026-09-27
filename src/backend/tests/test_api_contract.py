@@ -45,7 +45,15 @@ def test_intel_score_response_contract(client: TestClient, harness: Harness) -> 
     assert response.status_code == 200, response.text
     body = response.json()
     assert_envelope(body, {"company", "scores", "key_points", "flow", "fundamentals"})
-    assert set(body["company"]) == {"name", "sector", "sub_sector", "last_close_idr"}
+    assert set(body["company"]) == {
+        "name", "sector", "sub_sector", "last_close_idr", "close_date",
+        "previous_close_idr", "previous_close_date", "change_idr", "change_percent",
+    }
+    assert body["company"]["close_date"] == body["as_of"]
+    assert all(
+        set(point) == {"kind", "category", "title", "text", "items", "source_keys"}
+        for point in body["key_points"]
+    )
     assert set(body["scores"]) == {
         "flow", "fundamental", "combined", "calculation_version",
         "calculated_at", "input_periods", "research_state",

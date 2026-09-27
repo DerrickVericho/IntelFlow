@@ -33,12 +33,16 @@ export interface Metric {
 }
 export interface MetricGroup { key: string; label: string; score: number | null; metrics: Metric[] }
 export interface FlowResponse extends Envelope { flow: FlowEvidence }
+export interface PriceResponse extends Envelope {
+  range: '1m' | '3m'; effective_start: string | null; effective_end: string | null; incomplete_history: boolean
+  series: { date: string; open: number | null; high: number | null; low: number | null; close: number; volume: number; market_cap: number | null }[]
+}
 export interface Research extends FlowResponse {
-  company: { name: string | null; sector: string | null; sub_sector: string | null; last_close_idr: number | null }
+  company: { name: string | null; sector: string | null; sub_sector: string | null; last_close_idr: number | null; close_date: string | null; previous_close_idr: number | null; previous_close_date: string | null; change_idr: number | null; change_percent: number | null }
   scores: {
     flow: Score; fundamental: Score; combined: Score
     calculation_version: string; calculated_at: string; input_periods: Record<string, string | null>; research_state: string
   }
-  key_points: { kind: 'evidence' | 'risk' | 'conflict' | 'unavailable'; title: string; text: string; source_keys: string[] }[]
+  key_points: { kind: 'evidence' | 'risk' | 'conflict' | 'unavailable'; category: 'flow' | 'fundamental' | 'coverage'; title: string; text: string; items: string[]; source_keys: string[] }[]
   fundamentals: { reporting_period: string | null; currency: string; groups: MetricGroup[] }
 }

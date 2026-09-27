@@ -1,38 +1,93 @@
-:root {
-  color-scheme: dark;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
-  --bg: #0c121c; --sidebar: #101824; --panel: #131d2b; --panel-raised: #182334;
-  --border: #283448; --border-soft: #202d40; --text: #eef2f8; --muted: #a0aec2;
-  --teal: #52d4b0; --blue: #82acff; --amber: #e9bd76; --red: #f08c90;
-  --radius: 12px; --radius-sm: 7px;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
-  color: var(--text); background: var(--bg); font-size: 14px;
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@theme inline {
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --color-canvas: var(--bg);
+  --color-surface: var(--panel);
+  --color-raised: var(--panel-raised);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--border-soft);
+  --color-control: var(--control-border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-positive: var(--teal);
+  --color-negative: var(--red);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative-soft: var(--negative-soft);
+  --color-caution: var(--amber);
+  --color-warning: var(--warning-bg);
+  --color-warning-line: var(--warning-border);
+  --color-period-active: var(--period-active);
+  --color-on-period-active: var(--on-period-active);
 }
+
+@layer base {
+:root {
+  /* Keep browser Auto Dark Theme from recoloring light surfaces while SVG chart
+     labels still use the light palette. */
+  color-scheme: only light;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+  --bg: #f7f7f8; --sidebar: #ffffff; --panel: #ffffff; --panel-raised: #eceff4;
+  --border: #c5cbd5; --border-soft: #dce0e7; --text: #172130; --muted: #566176;
+  --control-border: #7e8a9d;
+  --accent: #002fa7; --accent-soft: #e8edfc; --on-accent: #fdfdfe;
+  --period-active: #002fa7; --on-period-active: #ffffff; --chart-label: #243247;
+  --teal: #087652; --blue: #002fa7; --amber: #795008; --red: #b72e3d;
+  --positive-soft: #e4f4ed; --negative-soft: #fff0f1;
+  --warning-bg: #fff4da; --warning-border: #ddc78e; --error-bg: #fff0f1;
+  --radius: 16px; --radius-sm: 12px; --focus: #002fa7;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  color: var(--text); background: var(--bg); font-size: 16px;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c111a; --sidebar: #111823; --panel: #141d2a; --panel-raised: #1d293a;
+  --border: #42506a; --border-soft: #2c394d; --text: #edf1f8; --muted: #acb8ca;
+  --control-border: #71809a;
+  --accent: #94b4ff; --accent-soft: #1b2e50; --on-accent: #0c1933;
+  --period-active: #244b9b; --on-period-active: #ffffff; --chart-label: #edf1f8;
+  --teal: #65dab3; --blue: #94b4ff; --amber: #f0c979; --red: #ff9ca6;
+  --positive-soft: #132f2a; --negative-soft: #38232b;
+  --warning-bg: #2b251a; --warning-border: #695531; --error-bg: #302029; --focus: #94b4ff;
+}
+
+/* ECharts puts colors on SVG attributes. Keep the rendered labels tied to the
+   selected appearance even when a browser adjusts SVG paint separately. */
+.intelflow-chart svg text { fill: var(--chart-label) !important; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 360px; }
-a { color: var(--blue); text-decoration: none; }
-a:hover { text-decoration: underline; }
-button, input { font: inherit; }
-button { cursor: pointer; }
+body { margin: 0; min-width: 320px; color: var(--text); background: var(--bg); }
+input, select, option { color: var(--text); background-color: var(--panel); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 4px; }
+button, input, select { font: inherit; }
+button, select { cursor: pointer; }
+svg { flex-shrink: 0; }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+tbody tr:hover { background: var(--bg); }
 button:disabled { cursor: not-allowed; }
-button, input { border-radius: var(--radius-sm); }
-button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; }
+button, input, select { border-radius: var(--radius-sm); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
 main:focus { outline: none; }
 h1, h2, h3, p { margin: 0; }
-h1 { font-size: 30px; letter-spacing: -1px; font-weight: 600; }
-h2 { font-size: 20px; letter-spacing: -.55px; font-weight: 600; }
-h3 { font-size: 14px; font-weight: 600; }
+h1 { font-size: clamp(28px, 3vw, 42px); line-height: 1.16; letter-spacing: -1.2px; font-weight: 600; }
+h2 { font-size: 24px; letter-spacing: -.65px; line-height: 1.3; font-weight: 600; }
+h3 { font-size: 17px; line-height: 1.35; font-weight: 600; }
 p { line-height: 1.65; }
 strong { font-weight: 600; }
-small { font-size: 11px; }
-summary { cursor: pointer; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
-th, td { text-align: left; padding: 13px 12px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
-th { color: var(--muted); font-size: 11px; font-weight: 500; }
+small { font-size: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+th { color: var(--muted); font-size: 14px; font-weight: 500; background: var(--panel-raised); }
 td small { display: block; margin-top: 6px; color: var(--muted); }
-caption { text-align: left; padding: 12px; color: var(--muted); }
-tr[id] { scroll-margin-top: 20px; }
-tr:target { background: #26364a; }
-::selection { background: #285a60; color: white; }
+thead th { position: sticky; top: 0; z-index: 1; }
+caption { text-align: left; padding: 12px 16px; color: var(--muted); }
+tr[id], article[id], section[id] { scroll-margin-top: 24px; }
+:target { outline: 2px solid var(--accent); outline-offset: 4px; }
+::selection { background: var(--accent); color: var(--on-accent); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+}

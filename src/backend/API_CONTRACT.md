@@ -46,11 +46,11 @@ Missing values are null, not zero. Percent uses percentage points (12.4 = 12.4%)
 
 | Block | Contents |
 |---|---|
-| `company` | Nullable `name, sector, sub_sector, last_close_idr` |
+| `company` | Nullable `name, sector, sub_sector, last_close_idr, close_date, previous_close_idr, previous_close_date, change_idr, change_percent` |
 | `scores.flow/fundamental/combined` | `value` (0–100 or null), `reason`, `components[]` |
 | Score component | `key, value, weight, reason, source_keys[]`; weights are percentages |
 | Score metadata | `calculation_version, calculated_at, input_periods, research_state` inside `scores` |
-| `key_points[]` | `kind, title, text, source_keys[]`; deterministic evidence/conflict/risk/unavailable text |
+| `key_points[]` | `kind, category, title, text, items[], source_keys[]`; deterministic evidence/conflict/risk/unavailable summaries and structured bullets |
 | `flow` | Full chart block described below |
 | `fundamentals` | Four metric groups described below |
 
@@ -58,6 +58,23 @@ Scores use `draft-v0.2`, with exact rules in `docs/SCORING.md`. They are
 research hypotheses awaiting calibration. Scores are calculated on the fixed
 20-observation flow window; changing a flow tab changes evidence only.
 `input_periods` identifies flow start/end, financial year, and valuation year.
+
+Company changes compare the latest close with the immediately preceding observed
+trading close from the existing daily history. `change_idr` is the signed price
+difference; `change_percent` is `100 * change_idr / previous_close_idr`, rounded
+to four decimals. Both changes are null if either close is nonpositive or the
+comparison observation is absent. Dates are ISO dates and refer to those two
+observations, not retrieval time. No additional provider request is made.
+
+Key-point `category` is `flow`, `fundamental`, or `coverage`; `items` is an array
+of plain-English strings (empty when no supporting bullets exist). `text`
+remains the summary for backwards compatibility. Sources apply to the summary
+and its bullets. Clients group by category rather than parsing titles or prose.
+
+The Flow aggregate can be null even when all component values are present:
+components describe available observations, while the aggregate requires full
+coverage. Its `reason` now includes the specific coverage failures and missing
+dates where known. The Combined component carries the same explanation.
 
 ## Flow chart block
 

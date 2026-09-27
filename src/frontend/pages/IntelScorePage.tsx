@@ -2,16 +2,16 @@ import { Navigate, useParams, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { getResearch } from '../api/client'
-import { SymbolSearch } from '../components/SymbolSearch'
 import { DataStatus, ErrorState, Loading } from '../components/States'
-import { SourceRefs, SourceTable } from '../components/Sources'
+import { ResearchFooter } from '../components/Sources'
 import { Scores } from '../features/scores/Scores'
 import { FlowSection } from '../features/flow/FlowSection'
 import { Fundamentals } from '../features/fundamentals/Fundamentals'
-import { date, idr, normalizeSymbol, validSymbol } from '../utils/format'
+import { compact, date, metricValue, number, normalizeSymbol, validSymbol } from '../utils/format'
 import type { Window } from '../types/research'
-import s from './research.module.css'
-import ui from '../components/ui.module.css'
+import { ui } from '../components/ui'
+import { keyInsights } from '../features/scores/interpretation'
+import { Trends } from '../features/trends/Trends'
 
 export function IntelScorePage() {
   const { symbol: raw = '' } = useParams()
@@ -25,21 +25,44 @@ export function IntelScorePage() {
   const data = query.data
   useEffect(() => { document.title = `${symbol} · IntelScore | IntelFlow`; return () => { document.title = 'IntelFlow · IDX research' } }, [symbol])
   if (valid && raw !== symbol) return <Navigate to={`/stocks/${symbol}/intel-score${params.size ? `?${params}` : ''}`} replace />
-  return <div className={s.page}>
-    <header className={s.header}><div><span className={ui.eyebrow}>SYMBOL RESEARCH</span><h1>IntelScore <span className={s.symbol}>{symbol}</span></h1><p className={ui.muted}>Read the flow. Understand the fundamentals.</p></div><SymbolSearch key={symbol} initial={symbol} /></header>
-    {!valid ? <div className={ui.errorBox} role="alert"><h2>Invalid ticker format</h2><p>Use exactly four letters. The .JK suffix is optional. No research request was sent.</p></div> : <>
-      {query.isPending && <Loading />}
-      {query.isError && <ErrorState error={query.error} retry={() => void query.refetch()} />}
+  const change = data?.company.change_idr
+  const changePercent = data?.company.change_percent
+  const hasChange = typeof change === 'number' && typeof changePercent === 'number'
+  const liquidity = data?.flow.liquidity
+  return <div className="space-y-6">
+    {!valid ? <div className={ui.errorBox} role="alert"><h1>Invalid ticker format</h1><p>Use exactly four letters. The .JK suffix is optional.</p></div> : <>
+      {query.isPending && <><header className="flex flex-wrap items-center justify-between gap-6"><h1>Researching {symbol}</h1></header><Loading /></>}
+      {query.isError && <ErrorState error={query.error} retry={() => void query.refetch()} allowSearch={false} />}
       {data && <>
-        <div className={s.company}><div><h2>{data.company.name ?? 'Company identity unavailable'}</h2><p>{data.company.sector ?? 'Sector unavailable'}{data.company.sub_sector ? ` / ${data.company.sub_sector}` : ''} <span>·</span> Last close <strong>{idr(data.company.last_close_idr)}</strong></p></div><div className={s.freshness}><span className={data.status === 'complete' ? ui.badge : ui.badgeWarning}>{data.status === 'complete' ? 'Complete inputs' : `${data.status} inputs`}</span><span>Observed {date(data.as_of)}</span></div></div>
+        <header aria-label="Company market summary" className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="grid items-center gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="flex min-w-0 items-center gap-4"><span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-base font-bold text-accent">{symbol}</span>
+              <div><div className="mb-1 flex flex-wrap items-center gap-2 text-sm text-muted"><span>IDX · {symbol}</span><span>{data.company.sector ?? 'Sector unavailable'}</span></div><h1 className="text-xl tracking-tight sm:text-2xl">{data.company.name ?? symbol}</h1>{data.company.sub_sector && <p className="mt-1 text-sm text-muted">{data.company.sub_sector}</p>}</div>
+            </div>
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 lg:max-w-sm lg:justify-end">
+            <div className="text-4xl font-semibold tracking-tight tabular-nums" data-testid="last-close">{data.company.last_close_idr === null ? 'Price unavailable' : <><span className="mr-2 text-sm font-normal text-muted">IDR</span>{number(data.company.last_close_idr)}</>}</div>
+            {hasChange ? <p data-testid="price-change" className={`pb-1 text-base font-semibold tabular-nums ${change > 0 ? 'text-positive' : change < 0 ? 'text-negative' : 'text-muted'}`}>{change > 0 ? 'Up' : change < 0 ? 'Down' : 'Unchanged'} {change > 0 ? '+' : ''}{number(change)} ({changePercent > 0 ? '+' : ''}{number(changePercent)}%)</p> : <p className="text-sm text-muted">Change unavailable</p>}
+            <p className="w-full text-sm text-muted">Close · {date(data.company.close_date ?? data.as_of)}{hasChange ? ` · vs. ${date(data.company.previous_close_date)}` : ''}</p>
+          </div>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line bg-canvas px-5 py-4 sm:grid-cols-4 sm:px-7 [&_dt]:text-sm [&_dt]:text-muted [&_dd]:mt-1 [&_dd]:text-lg [&_dd]:font-semibold [&_dd]:tabular-nums">
+            <div><dt>Volume · shares</dt><dd data-testid="header-volume">{compact(liquidity?.latest_volume_shares ?? null)}</dd></div>
+            <div><dt>Avg. volume · {liquidity?.baseline_window ?? 20} prior observations</dt><dd data-testid="header-average-volume">{compact(liquidity?.average_volume_shares ?? null)}</dd></div>
+            <div><dt>Volume / average</dt><dd>{metricValue(liquidity?.latest_vs_average_ratio ?? null, 'ratio')}</dd></div>
+            <div><dt>Previous close · IDR</dt><dd>{number(data.company.previous_close_idr ?? null)}</dd></div>
+          </dl>
+        </header>
         {query.isError && <p className={ui.notice}>Showing the last successful response. Refresh failed; the displayed evidence has not been updated.</p>}
         <DataStatus data={data} />
         <Scores data={data} />
-        <section className={s.keyPoints} aria-labelledby="key-points"><div className={ui.sectionHeading}><div><span className={ui.eyebrow}>THE RESEARCH BRIEF</span><h2 id="key-points">Key points</h2></div><span className={ui.muted}>Backend evidence · fixed 20-observation window</span></div><div className={s.pointGrid}>{data.key_points.map((point, i) => <article key={`${point.kind}-${i}`}><span className={point.kind === 'evidence' ? ui.badge : ui.badgeWarning}>{point.kind}</span><h3>{point.title}</h3><p>{point.text}</p><SourceRefs keys={point.source_keys} sources={data.sources} /></article>)}</div>{data.key_points.length === 0 && <p className={ui.muted}>No key points supplied for this symbol.</p>}</section>
+        <section className={ui.panel} aria-labelledby="key-points"><h2 id="key-points" className="mb-5 text-xl">Key points</h2>
+          <ul className="grid gap-5 lg:grid-cols-2">{keyInsights(data).map((point, i) => <li key={i} className="border-l-2 border-accent/40 pl-4"><h3 className="text-sm font-medium text-muted">{point.category}</h3><p className="mt-1 text-base">{point.text}</p></li>)}</ul>
+        </section>
+        <Trends key={`trends-${symbol}`} data={data} />
         {!validWindow && <p className={ui.notice} role="status">Unsupported evidence window. Showing the default 20D; choose 1D, 5D, or 20D below.</p>}
         <FlowSection key={symbol} data={data} window={window} setWindow={next => { const updated = new URLSearchParams(params); if (next === '20d') updated.delete('window'); else updated.set('window', next); setParams(updated) }} />
         <Fundamentals data={data} />
-        <section className={ui.panel} aria-labelledby="sources-title"><div className={ui.sectionHeading}><div><span className={ui.eyebrow}>03 / THE EVIDENCE TRAIL</span><h2 id="sources-title">Sources & data freshness</h2><p className={ui.muted}>Observation dates describe the data. Retrieval times describe when the backend fetched it.</p></div></div><SourceTable sources={data.sources} /></section>
+        <ResearchFooter data={data} />
       </>}
     </>}
   </div>

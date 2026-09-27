@@ -77,7 +77,12 @@ class ResearchService:
                     "upstream_status": exc.status_code,
                 },
             )
-            missing.append(MissingInput(key=key, reason=type(exc).__name__))
+            missing.append(
+                MissingInput(
+                    key=key,
+                    reason="This source could not be retrieved from Sectors.",
+                )
+            )
             return None
 
     async def _history(
@@ -128,7 +133,8 @@ class ResearchService:
         if len(selected) < count:
             missing.append(
                 MissingInput(
-                    key="flow.window", reason="Insufficient trading observations"
+                    key="flow.window",
+                    reason=f"Only {len(selected)} of {count} requested trading observations are available ({start} to {end}).",
                 )
             )
         top = await self._optional(
@@ -201,7 +207,14 @@ class ResearchService:
                 missing.append(
                     MissingInput(
                         key="foreign_flow",
-                        reason="Foreign series does not cover every selected observation",
+                        reason=f"Foreign flow covers {len(foreign_rows)} of {len(selected)} trading dates. Missing: "
+                        + ", ".join(
+                            str(d)
+                            for d in sorted(
+                                selected_dates - {r.date for r in foreign_rows}
+                            )
+                        )
+                        + ".",
                     )
                 )
         evidence = FlowEvidence(
@@ -218,7 +231,13 @@ class ResearchService:
             missing.append(
                 MissingInput(
                     key="liquidity.baseline",
-                    reason="Some dates lack 20 prior observations or have a zero baseline",
+                    reason="Volume needs 20 earlier observations with a positive average. Incomplete baseline on: "
+                    + ", ".join(
+                        str(p.date)
+                        for p in evidence.liquidity.series
+                        if p.volume_ratio is None
+                    )
+                    + ".",
                 )
             )
         return FlowResponse(
@@ -277,16 +296,31 @@ class ResearchService:
         fundamentals = fundamentals_evidence(financials, valuation)
         scores = calculate(response.flow, fundamentals, financials=financials)
         # Partial observation windows must not produce a full-window flow score.
-        if any(
-            m.key in {"flow.window", "foreign_flow", "broker_top", "liquidity.baseline"}
+        coverage_issues = [
+            m
             for m in missing
-        ):
+            if m.key
+            in {"flow.window", "foreign_flow", "broker_top", "liquidity.baseline"}
+        ]
+        if coverage_issues:
+            coverage_labels = {
+                "flow.window": "Trading history",
+                "foreign_flow": "Foreign investor flow",
+                "broker_top": "Broker rankings",
+                "liquidity.baseline": "Volume baseline",
+            }
+            coverage_reason = (
+                "Complete coverage is required for the 20-day Flow Score. "
+                + " ".join(
+                    f"{coverage_labels[m.key]}: {m.reason}" for m in coverage_issues
+                )
+            )
             scores.flow.value = None
-            scores.flow.reason = "Incomplete flow input coverage"
+            scores.flow.reason = coverage_reason
             scores.combined.value = None
             scores.combined.reason = "Flow score unavailable"
             scores.combined.components[0].value = None
-            scores.combined.components[0].reason = "Incomplete flow input coverage"
+            scores.combined.components[0].reason = coverage_reason
             scores.research_state = "Insufficient evidence"
         for name in ("flow", "fundamental", "combined"):
             score = getattr(scores, name)
@@ -315,11 +349,28 @@ class ResearchService:
                         )
                     )
         identity = next((r.data.company_name for r, _ in sections.values() if r), None)
+        prices = response.flow.liquidity.series
+        latest = prices[-1]
+        previous = prices[-2] if len(prices) >= 2 else None
+        change = (
+            latest.close_idr - previous.close_idr
+            if previous and previous.close_idr > 0 and latest.close_idr > 0
+            else None
+        )
         company = Company(
             name=identity,
             sector=overview.sector if overview else None,
             sub_sector=overview.sub_sector if overview else None,
-            last_close_idr=response.flow.liquidity.series[-1].close_idr,
+            last_close_idr=latest.close_idr,
+            close_date=latest.date,
+            previous_close_idr=previous.close_idr if previous else None,
+            previous_close_date=previous.date if previous else None,
+            change_idr=change,
+            change_percent=(
+                round(100 * change / previous.close_idr, 4)
+                if change is not None and previous
+                else None
+            ),
         )
         points = []
         breadth = response.flow.broker_summary.breadth
@@ -331,10 +382,11 @@ class ResearchService:
                 KeyPoint(
                     kind="conflict" if len(directions) > 1 else "evidence",
                     title="Broker concentration",
-                    text="Top buyer/seller balance: "
-                    + "; ".join(
-                        f"top {b.top_n}: IDR {b.balance_idr:,}" for b in breadth
-                    ),
+                    text="Compare the balance of ranked net buyers and sellers.",
+                    items=[
+                        f"Top {b.top_n}: IDR {b.balance_idr:+,} across {b.buyer_count} buyers and {b.seller_count} sellers."
+                        for b in breadth
+                    ],
                     source_keys=["broker_top"],
                 )
             )
@@ -344,11 +396,10 @@ class ResearchService:
                 KeyPoint(
                     kind="evidence",
                     title="Foreign investor flow",
-                    text=(
-                        f"Net IDR {foreign.net_inflow_idr:,} across "
-                        f"{len(foreign.series)} observations; "
-                        f"{foreign.positive_days} positive-flow days."
-                    ),
+                    text=f"Net IDR {foreign.net_inflow_idr:+,} across {len(foreign.series)} observations.",
+                    items=[
+                        f"{foreign.positive_days} positive-flow days and {foreign.negative_days} negative-flow days."
+                    ],
                     source_keys=["foreign_flow"],
                 )
             )
@@ -370,10 +421,19 @@ class ResearchService:
                     else "unavailable"
                 ),
                 title="Fundamental support",
+                category="fundamental",
                 text=(
-                    f"{scores.research_state}. Financial reporting year: "
+                    "Financial reporting year: "
                     f"{fundamentals.reporting_period or 'unavailable'}."
                 ),
+                items=[
+                    (
+                        f"{group.label}: {group.score:.2f} / 100."
+                        if group.score is not None
+                        else f"{group.label}: not enough evidence to calculate."
+                    )
+                    for group in fundamentals.groups
+                ],
                 source_keys=[s.key for s in sources if s.key.startswith("company_")],
             )
         )
@@ -382,10 +442,8 @@ class ResearchService:
                 KeyPoint(
                     kind="unavailable",
                     title="Incomplete evidence",
-                    text=(
-                        f"{len(missing)} input or calculation limitations; "
-                        "inspect missing_inputs."
-                    ),
+                    category="coverage",
+                    text="Some evidence is unavailable. Check data availability for the affected sections and score limitations.",
                     source_keys=[],
                 )
             )

@@ -5,13 +5,14 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { App } from '../app/App'
 import { createQueryClient } from '../api/query'
 import testResponse from './data/research-response.json'
+import { priceResponse } from './fixtures'
 import type { Research } from '../types/research'
 import { metricValue, normalizeSymbol, validSymbol } from '../utils/format'
 import { getResearch, ApiError } from '../api/client'
 
 vi.mock('../components/Chart', () => ({
   Chart: ({ label }: { label: string }) => <div role="img" aria-label={label} />,
-  chartBase: {}, chartColors: { text: '', grid: '', teal: '', red: '', blue: '' },
+  useChartTheme: () => ({ chartBase: {}, chartColors: { text: '', grid: '', teal: '', red: '', blue: '' } }),
 }))
 const reply = (data: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } }))
 function mount(path = '/stocks/BBCA/intel-score') {
@@ -20,7 +21,7 @@ function mount(path = '/stocks/BBCA/intel-score') {
   return client
 }
 function mockApi(data: Research = structuredClone(testResponse) as Research) {
-  const fetcher = vi.fn(() => reply(data))
+  const fetcher = vi.fn((url: string) => reply(url.includes('/price-history?') ? priceResponse() : data))
   vi.stubGlobal('fetch', fetcher)
   return fetcher
 }
@@ -44,7 +45,7 @@ test('Home exact symbol navigation makes one aggregate request and shows backend
   await user.type(screen.getByRole('textbox', { name: 'IDX symbol' }), ' bbca.jk ')
   await user.click(screen.getByRole('button', { name: 'Open IntelScore' }))
   await screen.findByText('Test response company')
-  expect(fetcher).toHaveBeenCalledTimes(1)
+  expect(fetcher).toHaveBeenCalledTimes(2)
   expect(fetcher.mock.calls[0]).toEqual(expect.arrayContaining(['/api/v1/stocks/BBCA/intel-score']))
   for (const key of ['flow', 'fundamental', 'combined'] as const) expect(screen.getByTestId(`score-${key}`)).toHaveTextContent(String(testResponse.scores[key].value))
 })
@@ -65,17 +66,17 @@ test('invalid Home submission is accessible and does not fetch', async () => {
 
 test('flow tabs request only evidence; scores remain from aggregate and 20D reuses it', async () => {
   const data = structuredClone(testResponse) as Research
-  const fetcher = vi.fn((url: string) => url.includes('/flow?') ? reply({ ...data, flow: { ...data.flow, window: '5d', trading_days: 5 } }) : reply(data))
+  const fetcher = vi.fn((url: string) => url.includes('/price-history?') ? reply(priceResponse()) : url.includes('/flow?') ? reply({ ...data, flow: { ...data.flow, window: '5d', trading_days: 5 } }) : reply(data))
   vi.stubGlobal('fetch', fetcher); mount()
   await screen.findByText('Test response company')
   await userEvent.click(screen.getByRole('button', { name: '5D' }))
   await screen.findByText('5 observed trading days')
-  expect(fetcher).toHaveBeenCalledTimes(2)
-  expect(fetcher.mock.calls[1][0]).toBe('/api/v1/stocks/BBCA/flow?window=5d')
+  expect(fetcher).toHaveBeenCalledTimes(3)
+  expect(fetcher.mock.calls[2][0]).toBe('/api/v1/stocks/BBCA/flow?window=5d')
   expect(screen.getByTestId('score-flow')).toHaveTextContent(String(testResponse.scores.flow.value))
   await userEvent.click(screen.getByRole('button', { name: '20D' }))
   await screen.findByText('20 observed trading days')
-  expect(fetcher).toHaveBeenCalledTimes(2)
+  expect(fetcher).toHaveBeenCalledTimes(3)
 })
 
 test('partial and stale are simultaneous, unavailable score never becomes zero', async () => {
@@ -84,12 +85,13 @@ test('partial and stale are simultaneous, unavailable score never becomes zero',
   data.scores.flow = { value: null, reason: 'Foreign source missing.', components: [] }
   data.missing_inputs = [{ key: 'foreign_flow', reason: 'Source unavailable.' }]
   mockApi(data); mount()
-  await screen.findByText('Partial data')
-  expect(screen.getByText('Stale data')).toBeInTheDocument()
-  expect(screen.getByTestId('score-flow')).toHaveTextContent('—/ 100')
+  await screen.findByText('Some data is unavailable')
+  expect(screen.getByText('Some sources need an update')).toBeInTheDocument()
+  expect(screen.getByTestId('score-flow')).toHaveTextContent('N/A')
   expect(screen.getByText('Foreign source missing.')).toBeInTheDocument()
   expect(screen.getByText('Not calculated')).toBeInTheDocument()
-  expect(screen.getByText('Missing inputs (1)')).toBeInTheDocument()
+  expect(screen.queryByText('Data availability details (1)')).not.toBeInTheDocument()
+  expect(document.querySelector('details')).toBeNull()
 })
 
 test('empty sections and undated quarterly snapshots have explicit states', async () => {
@@ -108,7 +110,8 @@ test.each([404, 422, 503])('HTTP %s has distinct messaging and no automatic retr
   vi.stubGlobal('fetch', fetcher); mount()
   const alert = await screen.findByRole('alert')
   expect(alert).toHaveTextContent(status === 404 ? 'No data found' : status === 422 ? 'Invalid request' : 'Research temporarily unavailable')
-  expect(alert).toHaveTextContent('test-request')
+  expect(alert).not.toHaveTextContent('test-request')
+  expect(alert).not.toHaveTextContent('Test failure')
   if (status === 404) expect(alert).toHaveTextContent('does not confirm that the ticker is invalid')
   if (status === 503) { await userEvent.click(within(alert).getByRole('button', { name: 'Try again' })); await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2)) }
   else expect(fetcher).toHaveBeenCalledTimes(1)
@@ -135,4 +138,37 @@ test('network failure maps safely and abort remains cancellable', async () => {
   await expect(getResearch('BBCA', new AbortController().signal)).rejects.toBeInstanceOf(ApiError)
   const controller = new AbortController(); controller.abort()
   await expect(getResearch('BBCA', controller.signal)).rejects.toBeInstanceOf(TypeError)
+})
+
+
+test('revision v2 exposes market context and score components without internal labels or disclosures', async () => {
+  const data = structuredClone(testResponse) as Research
+  data.status = 'partial'
+  data.missing_inputs = [{ key: 'fundamentals.capital_expenditure', reason: 'Internal unavailable diagnostic' }]
+  mockApi(data); mount()
+  await screen.findByText('Test response company')
+  expect(screen.getByTestId('header-volume')).toHaveTextContent(new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(data.flow.liquidity.latest_volume_shares!))
+  expect(screen.getByTestId('header-average-volume')).not.toHaveTextContent('Unavailable')
+  const overall = screen.getByRole('article', { name: 'Overall Score' })
+  expect(within(overall).getByText('Combined')).toBeVisible()
+  expect(within(overall).getByText('60%')).toBeVisible()
+  expect(within(screen.getByRole('article', { name: 'Flow Score' })).getByText('Liquidity')).toBeVisible()
+  expect(document.querySelectorAll('details, summary, a[href^="#source"]')).toHaveLength(0)
+  expect(screen.queryByText(/fundamentals\.capital_expenditure/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/draft-v/)).not.toBeInTheDocument()
+  expect(screen.getByText(/Unavailable: capital expenditure/)).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'Data attribution' })).toHaveTextContent('not investment advice')
+})
+
+test.each([-1, 0, 1])('price change %s retains its sign and accessible direction', async change => {
+  const data = structuredClone(testResponse) as Research
+  data.company.change_idr = change
+  data.company.change_percent = change / 10
+  data.flow.liquidity.latest_volume_shares = 0
+  data.flow.liquidity.average_volume_shares = null
+  mockApi(data); mount()
+  await screen.findByText('Test response company')
+  expect(screen.getByTestId('price-change')).toHaveTextContent(change > 0 ? 'Up +1 (+0.1%)' : change < 0 ? 'Down -1 (-0.1%)' : 'Unchanged 0 (0%)')
+  expect(screen.getByTestId('header-volume')).toHaveTextContent('0')
+  expect(screen.getByTestId('header-average-volume')).toHaveTextContent('Unavailable')
 })

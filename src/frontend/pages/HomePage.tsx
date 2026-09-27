@@ -1,27 +1,28 @@
 import { Link } from 'react-router'
 import { SymbolSearch } from '../components/SymbolSearch'
 import { Icon } from '../components/Icon'
-import s from './home.module.css'
-import ui from '../components/ui.module.css'
 
 export function HomePage({ researchEntry = false }: { researchEntry?: boolean }) {
+  if (researchEntry) return <section className="max-w-3xl py-8 sm:py-14">
+    <h1>Which company are you researching?</h1>
+    <p className="mt-5 mb-8 max-w-xl text-muted">Broker activity, foreign flow, and company fundamentals for one IDX ticker.</p>
+    <SymbolSearch large />
+    <Link className="mt-5 inline-flex items-center gap-2 text-sm font-medium" to="/stocks/BBCA/intel-score">Explore BBCA <Icon name="arrow" size={16} /></Link>
+  </section>
   return <>
-    <section className={s.hero}>
-      <div className={s.eyebrow}><span /> A CLEARER VIEW OF INDONESIAN EQUITIES</div>
-      <h1>{researchEntry ? <>One symbol.<br /><em>The full context.</em></> : <>Start with the flow.<br /><em>See the bigger picture.</em></>}</h1>
-      <p className={s.lede}>Follow broker activity and foreign capital. Put the movement in context with company fundamentals—all in one research workspace.</p>
-      <div className={s.searchArea}><SymbolSearch large /><p className={s.searchHelp}>Enter an exact IDX ticker. Uppercase, lowercase, and .JK are supported.</p></div>
-      <div className={s.exampleLink}><span>Contoh saham IDX</span><Link to="/stocks/BBCA/intel-score">Lihat IntelScore BBCA <Icon name="arrow" size={16} /></Link></div>
-      <div className={s.heroDecoration} aria-hidden="true"><div /><div /><div /><div /><div /><div /><div /></div>
+    <section className="pt-6 pb-12 sm:pt-10 sm:pb-16">
+      <h1 className="max-w-5xl text-[clamp(2.1rem,4vw,3.75rem)] leading-[1.12] tracking-[-0.045em]">Start with the flow.<br /><span className="text-accent">Understand the business.</span></h1>
+      <p className="mt-6 max-w-xl text-base text-muted">Broker activity, foreign capital, and company fundamentals. A connected view of Indonesian equities.</p>
+      <div className="mt-8"><SymbolSearch large /></div>
+      <Link className="mt-5 inline-flex items-center gap-2 text-sm font-medium" to="/stocks/BBCA/intel-score">Explore BBCA <Icon name="arrow" size={16} /></Link>
     </section>
-    <section className={s.method} aria-labelledby="method-title">
-      <div className={ui.sectionHeading}><div><span className={ui.eyebrow}>THE INTELFLOW APPROACH</span><h2 id="method-title">Three perspectives. One research view.</h2></div><span className={ui.muted}>Flow first. Fundamentals for context.</span></div>
-      <div className={s.steps}>
-        <article className={s.step}><span className={s.stepNumber}>01 / FOLLOW</span><span className={s.stepIcon}><Icon name="flow" size={26} /></span><h3>Flow Score</h3><p>Understand broker accumulation, foreign flow, and activity relative to the stock’s own volume history.</p><span className={s.stepTag}>Where is participation moving?</span></article>
-        <article className={s.step}><span className={s.stepNumber}>02 / CONTEXTUALIZE</span><span className={s.stepIcon}><Icon name="document" size={26} /></span><h3>Fundamental Score</h3><p>Inspect growth, earnings, cash flow, and valuation to understand the business behind the activity.</p><span className={s.stepTag}>What does the business show?</span></article>
-        <article className={s.step}><span className={s.stepNumber}>03 / CONNECT</span><span className={s.stepIcon}><Icon name="layers" size={26} /></span><h3>Combined Score</h3><p>Bring both perspectives together, with separate scores and a transparent, dated evidence trail.</p><span className={s.stepTag}>How do the perspectives align?</span></article>
+    <section aria-label="Research perspectives" className="grid gap-6 border-t border-line py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:gap-14">
+      <div><h2 className="text-2xl">Capital meets context.</h2><p className="mt-4 max-w-sm text-sm text-muted">Three independent scores connect market participation with reported business performance.</p></div>
+      <div className="divide-y divide-line">
+        <article className="flex gap-4 pb-6"><span className="text-accent"><Icon name="flow" size={24} /></span><div><h3>Broker & foreign flow</h3><p className="mt-2 text-sm text-muted">Ranked broker activity, foreign participation, and volume against recent history.</p></div></article>
+        <article className="flex gap-4 py-6"><span className="text-accent"><Icon name="document" size={24} /></span><div><h3>Company fundamentals</h3><p className="mt-2 text-sm text-muted">Growth, earnings, cash generation, and valuation with annual reporting periods.</p></div></article>
+        <article className="flex gap-4 pt-6"><span className="text-accent"><Icon name="layers" size={24} /></span><div><h3>Overall Score</h3><p className="mt-2 text-sm text-muted">Flow and fundamental support, with component values and weights always visible.</p></div></article>
       </div>
     </section>
-    <div className={s.principles}><div><span>01</span><strong>Evidence you can inspect</strong><p>Source periods, missing inputs, and score components stay visible.</p></div><div><span>02</span><strong>Your research. Your judgment.</strong><p>Draft research scores provide context, not trading instructions.</p></div></div>
   </>
 }

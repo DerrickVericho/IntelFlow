@@ -8,7 +8,7 @@
       "provider": "sectors",
       "as_of": "2026-09-22",
       "period": null,
-      "fetched_at": "2026-09-22T15:07:25.142907Z",
+      "fetched_at": "2026-09-26T03:57:38.779723Z",
       "effective_start": "2026-06-25",
       "effective_end": "2026-09-22",
       "is_stale": false
@@ -18,7 +18,7 @@
       "provider": "sectors",
       "as_of": "2026-09-22",
       "period": null,
-      "fetched_at": "2026-09-22T15:07:25.144061Z",
+      "fetched_at": "2026-09-26T03:57:38.780724Z",
       "effective_start": "2026-08-26",
       "effective_end": "2026-09-22",
       "is_stale": false
@@ -28,7 +28,7 @@
       "provider": "sectors",
       "as_of": "2026-09-22",
       "period": null,
-      "fetched_at": "2026-09-22T15:07:25.145533Z",
+      "fetched_at": "2026-09-26T03:57:38.782105Z",
       "effective_start": "2026-08-26",
       "effective_end": "2026-09-22",
       "is_stale": false
@@ -38,7 +38,7 @@
       "provider": "sectors",
       "as_of": null,
       "period": null,
-      "fetched_at": "2026-09-22T15:07:25.148041Z",
+      "fetched_at": "2026-09-26T03:57:38.784149Z",
       "effective_start": null,
       "effective_end": null,
       "is_stale": false
@@ -48,7 +48,7 @@
       "provider": "sectors",
       "as_of": null,
       "period": "2025",
-      "fetched_at": "2026-09-22T15:07:25.148041Z",
+      "fetched_at": "2026-09-26T03:57:38.784149Z",
       "effective_start": null,
       "effective_end": null,
       "is_stale": false
@@ -58,7 +58,7 @@
       "provider": "sectors",
       "as_of": "2026-09-22",
       "period": "2026",
-      "fetched_at": "2026-09-22T15:07:25.148041Z",
+      "fetched_at": "2026-09-26T03:57:38.785151Z",
       "effective_start": null,
       "effective_end": null,
       "is_stale": false
@@ -587,7 +587,12 @@
     "name": "Test response company",
     "sector": "Test",
     "sub_sector": "Test",
-    "last_close_idr": 1063
+    "last_close_idr": 1063,
+    "close_date": "2026-09-22",
+    "previous_close_idr": 1062,
+    "previous_close_date": "2026-09-21",
+    "change_idr": 1,
+    "change_percent": 0.0942
   },
   "scores": {
     "flow": {
@@ -686,7 +691,7 @@
       "reason": null
     },
     "calculation_version": "draft-v0.2",
-    "calculated_at": "2026-09-22T15:07:25.151262Z",
+    "calculated_at": "2026-09-26T03:57:38.786147Z",
     "input_periods": {
       "flow_start": "2026-08-26",
       "flow_end": "2026-09-22",
@@ -698,32 +703,51 @@
   "key_points": [
     {
       "kind": "evidence",
+      "category": "flow",
       "title": "Broker concentration",
-      "text": "Top buyer/seller balance: top 3: IDR 28,500; top 5: IDR 45,000; top 10: IDR 77,500",
+      "text": "Compare the balance of ranked net buyers and sellers.",
+      "items": [
+        "Top 3: IDR +28,500 across 3 buyers and 3 sellers.",
+        "Top 5: IDR +45,000 across 5 buyers and 5 sellers.",
+        "Top 10: IDR +77,500 across 10 buyers and 10 sellers."
+      ],
       "source_keys": [
         "broker_top"
       ]
     },
     {
       "kind": "evidence",
+      "category": "flow",
       "title": "Foreign investor flow",
-      "text": "Net IDR 100,000 across 20 observations; 20 positive-flow days.",
+      "text": "Net IDR +100,000 across 20 observations.",
+      "items": [
+        "20 positive-flow days and 0 negative-flow days."
+      ],
       "source_keys": [
         "foreign_flow"
       ]
     },
     {
       "kind": "evidence",
+      "category": "flow",
       "title": "Trading activity",
       "text": "Latest volume is 1.07 times its preceding 20-observation mean.",
+      "items": [],
       "source_keys": [
         "daily"
       ]
     },
     {
       "kind": "evidence",
+      "category": "fundamental",
       "title": "Fundamental support",
-      "text": "Accumulation with fundamental support. Financial reporting year: 2025.",
+      "text": "Financial reporting year: 2025.",
+      "items": [
+        "Growth: 75.00 / 100.",
+        "Earnings: 76.25 / 100.",
+        "Cash Flow: 71.67 / 100.",
+        "Valuation: 51.69 / 100."
+      ],
       "source_keys": [
         "company_overview",
         "company_financials",
