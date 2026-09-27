@@ -11,9 +11,9 @@ export function scoreBand(value: number | null) {
 }
 export type Band = ReturnType<typeof scoreBand>
 export const componentInfo: Record<string, { name: string; help: string }> = {
-  liquidity: { name: 'Liquidity', help: 'Trading volume relative to its preceding 20 observations.' },
-  foreign_flow: { name: 'Foreign flow', help: 'Net foreign participation and the balance of inflow days.' },
-  broker_flow: { name: 'Broker flow', help: 'Buyer versus seller concentration across ranked brokers.' },
+  liquidity: { name: 'Liquidity', help: 'Daily transaction value estimate against an IDR 5 billion benchmark.' },
+  foreign_flow: { name: 'Foreign flow', help: 'Net balance of foreign-ranked brokers, weighted by foreign investor participation.' },
+  broker_flow: { name: 'Broker flow', help: 'Independent 5-day and 20-day top broker balance, daily direction, and concentration, weighted 65% and 35%.' },
   growth: { name: 'Growth', help: 'Annual revenue and earnings growth.' },
   earnings: { name: 'Earnings', help: 'Profitability, margins, and returns on assets and equity.' },
   cash_flow: { name: 'Cash flow', help: 'Available cash flow observations from the latest three financial years.' },
@@ -31,8 +31,9 @@ export function dataConfidence(data: Research): { level: 'High' | 'Medium' | 'Lo
   if (data.status === 'stale' || data.sources.some(source => source.is_stale)) return { level: 'Low', reason: 'Some source data needs an update.' }
   const tradingDates = new Set(data.flow.liquidity.series.map(point => point.date))
   const foreignDates = new Set(data.flow.foreign_flow.series.map(point => point.date))
-  if (data.flow.incomplete_history || data.flow.trading_days < 20 || tradingDates.size < 20 || [...tradingDates].some(day => !foreignDates.has(day)) || components.some(c => c.value === null)) return { level: 'Low', reason: 'Scored evidence or trading-date coverage is incomplete.' }
-  const requiredSources = ['daily', 'broker_top', 'foreign_flow', 'company_financials', 'company_valuation']
+  const brokerDates = data.flow.broker_summary.daily ? new Set(data.flow.broker_summary.daily.map(point => point.date)) : null
+  if (data.flow.incomplete_history || data.flow.trading_days < 20 || tradingDates.size < 20 || [...tradingDates].some(day => !foreignDates.has(day) || (brokerDates !== null && !brokerDates.has(day))) || components.some(c => c.value === null)) return { level: 'Low', reason: 'Scored evidence or trading-date coverage is incomplete.' }
+  const requiredSources = ['daily', 'broker_top', ...(data.flow.broker_summary_5d ? ['broker_top_5d'] : []), 'foreign_flow', 'company_financials', 'company_valuation']
   const dated = requiredSources.every(key => data.sources.some(source => source.key === key && (source.as_of || source.period)))
   const completeComponents = ['liquidity', 'foreign_flow', 'broker_flow', 'growth', 'earnings', 'cash_flow', 'valuation'].every(key => components.some(c => c.key === key && c.value !== null))
   if (data.status === 'partial' || data.missing_inputs.length || !dated || !completeComponents) return { level: 'Medium', reason: 'Scores are available, but some inputs or source dates are missing.' }
@@ -45,7 +46,7 @@ export function researchSummary(data: Research): { band: Band; meaning: string; 
   const strongest = [...available].sort((a, b) => b.value - a.value).slice(0, 2)
   const weakest = [...available].sort((a, b) => a.value - b.value)[0]
   const driver = strongest.length ? `${strongest.every(c => c.value >= 70) ? 'Strong support from' : 'Most support from'} ${strongest.map(describe).join(' and ')}.` : 'No component evidence is available to identify a driver.'
-  const partialFlow = data.missing_inputs.some(item => ['flow.window', 'foreign_flow', 'broker_top', 'liquidity.baseline'].includes(item.key))
+  const partialFlow = data.missing_inputs.some(item => ['flow.window', 'foreign_flow', 'broker_top', 'broker_top_5d', 'broker_foreign_top', 'broker_activity', 'liquidity.value'].includes(item.key))
   const risk = data.scores.flow.value === null ? 'Flow coverage is incomplete; market participation cannot be confirmed.'
     : data.scores.fundamental.value === null ? 'Fundamental coverage is incomplete; business support cannot be confirmed.'
     : partialFlow ? 'Flow coverage is partial; the overall score uses the available observations and may change when missing data arrives.'

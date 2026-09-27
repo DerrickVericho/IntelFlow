@@ -30,8 +30,9 @@ function availability(items: Envelope['missing_inputs']) {
       : item.key === 'company_overview' ? 'Company overview'
       : item.key === 'shareholders.count' ? 'Shareholder count'
       : item.key === 'foreign_flow' ? 'Foreign flow'
-      : item.key.startsWith('liquidity') ? 'Volume history'
-      : item.key === 'broker_top' ? 'Broker activity'
+      : item.key === 'liquidity.baseline' ? 'Volume chart context'
+      : item.key.startsWith('liquidity') ? 'Liquidity data'
+      : item.key === 'broker_top' || item.key === 'broker_top_5d' || item.key === 'broker_foreign_top' || item.key === 'broker_activity' ? 'Broker activity'
       : item.key === 'flow.window' ? 'Trading history' : 'Research data'
     const description = item.key.startsWith('fundamentals.') ? label(item.key.slice('fundamentals.'.length)) : ''
     const values = groups.get(group) ?? new Set<string>()
@@ -42,8 +43,9 @@ function availability(items: Envelope['missing_inputs']) {
     ? `Unavailable: ${Array.from(metrics).join(', ')}. Other reported metrics remain available.`
     : name === 'Scores' ? 'One or more scores need additional evidence. Each affected score explains what is missing.'
     : name === 'Foreign flow' ? 'Foreign investor data is unavailable or does not cover every trading date. Check the Flow Score coverage note.'
-    : name === 'Volume history' ? 'Some trading dates lack the earlier volume history needed for a complete Flow Score.'
-    : name === 'Broker activity' ? 'Broker rankings are unavailable for the selected dates.'
+    : name === 'Volume chart context' ? 'Some dates lack earlier volume observations for the comparison chart. The IDR liquidity score uses the available daily values.'
+    : name === 'Liquidity data' ? 'Some dates lack valid closing price or share volume for the liquidity score.'
+    : name === 'Broker activity' ? 'Broker rankings or daily broker observations are incomplete for the selected dates.'
     : name === 'Trading history' ? 'Fewer trading observations are available than the selected period requires.'
     : name === 'Company overview' ? 'Company details are unavailable. Available trading evidence is shown below.'
     : name === 'Shareholder count' ? 'Some monthly counts or changes were not reported. Available category holdings remain visible.'

@@ -171,22 +171,22 @@ def test_one_missing_foreign_date_keeps_scored_result_with_coverage_warning(
     )
     assert response.scores.flow.value is not None
     assert response.scores.combined.value is not None
-    assert response.scores.calculation_version == "draft-v0.4"
+    assert response.scores.calculation_version == "draft-v0.7"
     assert "19 of 20" in response.scores.flow.reason
     assert missing_date in response.scores.flow.reason
     assert response.scores.combined.components[0].reason == response.scores.flow.reason
     assert "partial coverage" in response.scores.combined.reason.lower()
 
 
-def test_partial_volume_baseline_explains_null_aggregate(harness: Harness) -> None:
+def test_partial_volume_baseline_does_not_block_idr_liquidity_score(harness: Harness) -> None:
     harness.transport.rows = harness.transport.rows[-35:]
     response = asyncio.run(harness.service.research("TEST"))
     assert all(
         component.value is not None for component in response.scores.flow.components
     )
-    assert response.scores.flow.value is None
-    assert "Incomplete baseline on:" in response.scores.flow.reason
-    assert str(response.flow.effective_start) in response.scores.flow.reason
+    assert response.scores.flow.value is not None
+    assert response.scores.flow.reason is None
+    assert "liquidity.baseline" in {item.key for item in response.missing_inputs}
 
 
 def test_sixteen_volume_baselines_keep_scored_result(harness: Harness) -> None:
@@ -197,7 +197,7 @@ def test_sixteen_volume_baselines_keep_scored_result(harness: Harness) -> None:
     assert response.scores.flow.value is not None
     assert response.scores.combined.value is not None
     assert response.status == "partial"
-    assert "Partial coverage" in response.scores.flow.reason
+    assert response.scores.flow.reason is None
 
 
 def test_fifteen_foreign_dates_are_below_scoring_minimum(harness: Harness) -> None:
@@ -219,6 +219,44 @@ def test_fifteen_foreign_dates_are_below_scoring_minimum(harness: Harness) -> No
     assert "15 of 20" in response.scores.flow.reason
 
 
+def test_one_missing_broker_day_keeps_score_with_coverage_warning(harness: Harness) -> None:
+    original = harness.transport._get_broker_summary
+    missing_date = harness.transport.days[-3].isoformat()
+
+    def with_gap(**params: Any) -> dict[str, Any]:
+        payload = original(**params)
+        payload["data"] = [row for row in payload["data"] if row["date"] != missing_date]
+        return payload
+
+    harness.transport._get_broker_summary = with_gap
+    response = asyncio.run(harness.service.research("TEST"))
+    assert len(response.flow.broker_summary.daily) == 19
+    assert response.scores.flow.value is not None
+    assert response.scores.combined.value is not None
+    assert "Daily broker activity covers 19 of 20" in response.scores.flow.reason
+    assert missing_date in response.scores.flow.reason
+
+
+def test_three_recent_broker_days_are_below_scoring_minimum(harness: Harness) -> None:
+    original = harness.transport._get_broker_summary
+    missing_dates = {day.isoformat() for day in harness.transport.days[-2:]}
+
+    def with_recent_gap(**params: Any) -> dict[str, Any]:
+        payload = original(**params)
+        payload["data"] = [
+            row for row in payload["data"] if row["date"] not in missing_dates
+        ]
+        return payload
+
+    harness.transport._get_broker_summary = with_recent_gap
+    response = asyncio.run(harness.service.research("TEST"))
+    assert len(response.flow.broker_summary.daily) == 18
+    assert len(response.flow.broker_summary_5d.daily) == 3
+    assert response.scores.flow.value is None
+    assert response.scores.combined.value is None
+    assert "Daily broker activity covers 18 of 20" in response.scores.flow.reason
+
+
 def test_complete_coverage_has_scores_and_dated_price_change(harness: Harness) -> None:
     response = asyncio.run(harness.service.research("TEST"))
     latest, previous = harness.transport.rows[-1], harness.transport.rows[-2]
@@ -231,13 +269,58 @@ def test_complete_coverage_has_scores_and_dated_price_change(harness: Harness) -
     assert response.company.change_idr == latest["close"] - previous["close"]
     assert response.company.change_percent == round(100 / previous["close"], 4)
     assert harness.transport.calls["get_daily"] == 1
+    assert harness.transport.calls["get_top_brokers"] == 3
+    assert response.flow.broker_summary_5d is not None
+    assert len(response.flow.broker_summary_5d.daily) == 5
+    assert response.flow.foreign_broker_balance is not None
+    assert response.flow.foreign_broker_balance.balance_ratio > 0
     broker_point = next(
-        p for p in response.key_points if p.title == "Broker concentration"
+        p for p in response.key_points if p.title == "Broker balance by window"
     )
-    assert len(broker_point.items) == 3
+    assert len(broker_point.items) == 4
+    assert broker_point.source_keys == ["broker_top_5d", "broker_top"]
     assert broker_point.category == "flow"
     assert ";" not in broker_point.text
     assert any(p.category == "fundamental" for p in response.key_points)
+
+
+def test_foreign_scoring_uses_foreign_net_not_overall_net(harness: Harness) -> None:
+    original = harness.transport._get_top_brokers
+
+    def divergent_ranking(**params: Any) -> dict[str, Any]:
+        payload = original(**params)
+        if params.get("foreign"):
+            for row in payload["top_buyers"]:
+                row["net_idr"] = -1_000_000
+                row["foreign_net_idr"] = 125
+            for row in payload["top_sellers"]:
+                row["net_idr"] = 1_000_000
+                row["foreign_net_idr"] = -75
+        return payload
+
+    harness.transport._get_top_brokers = divergent_ranking
+    response = asyncio.run(harness.service.research("TEST"))
+    assert response.flow.foreign_broker_balance.balance_ratio == 0.25
+    foreign_component = next(c for c in response.scores.flow.components if c.key == "foreign_flow")
+    assert foreign_component.value == 87.5  # Fixture participation: 30% / 40%.
+
+
+def test_missing_foreign_ranking_does_not_fabricate_flow_score(harness: Harness) -> None:
+    original = harness.transport._get_top_brokers
+
+    def without_foreign_ranking(**params: Any) -> dict[str, Any]:
+        payload = original(**params)
+        if params.get("foreign"):
+            payload["top_buyers"] = []
+            payload["top_sellers"] = []
+        return payload
+
+    harness.transport._get_top_brokers = without_foreign_ranking
+    response = asyncio.run(harness.service.research("TEST"))
+    assert response.flow.foreign_broker_balance is None
+    assert response.scores.flow.value is None
+    assert response.scores.combined.value is None
+    assert "broker_foreign_top" in {item.key for item in response.missing_inputs}
 
 
 def test_fundamental_scores_average_available_recent_observations(harness: Harness) -> None:

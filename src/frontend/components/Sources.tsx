@@ -2,13 +2,19 @@ import type { Research, Source } from '../types/research'
 import { date, label } from '../utils/format'
 
 const names: Record<string, string> = {
-  daily: 'Price & volume', broker_top: 'Broker rankings', foreign_flow: 'Foreign investor flow',
+  daily: 'Price & volume', broker_top: '20-day broker rankings', broker_top_5d: '5-day broker rankings', broker_foreign_top: 'Foreign investor broker rankings', broker_activity: 'Daily broker activity', foreign_flow: 'Foreign investor flow',
   company_overview: 'Company overview', company_financials: 'Financial statements', company_valuation: 'Valuation',
 }
 export const sourceLabel = (key: string) => names[key] ?? label(key)
 
 export function ReportingPeriod({ sources }: { sources: Source[] }) {
-  return <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">{sources.filter(source => source.key !== 'company_overview').map(source => <span key={source.key}>{sourceLabel(source.key)}: {source.period ?? date(source.as_of)}{source.is_stale ? ' · Update needed' : ''}</span>)}</div>
+  const latestByKey = new Map<string, Source>()
+  for (const source of sources) {
+    if (source.key === 'company_overview') continue
+    const previous = latestByKey.get(source.key)
+    if (!previous || (source.as_of ?? '') > (previous.as_of ?? '')) latestByKey.set(source.key, source)
+  }
+  return <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">{[...latestByKey.values()].map(source => <span key={source.key}>{sourceLabel(source.key)}: {source.period ?? date(source.as_of)}{source.is_stale ? ' · Update needed' : ''}</span>)}</div>
 }
 
 export function ResearchFooter({ data }: { data: Research }) {

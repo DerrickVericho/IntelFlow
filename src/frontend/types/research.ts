@@ -16,10 +16,17 @@ export interface FlowEvidence {
   broker_summary: {
     brokers: Broker[]
     breadth: { top_n: number; buyer_net_idr: number; seller_net_idr: number; balance_idr: number; balance_ratio: number | null; buyer_count: number; seller_count: number }[]
+    daily?: { date: string; total_buy_idr: number; top3_net_idr: number; top5_net_idr: number; top3_seller_net_idr: number; top5_seller_net_idr: number }[]
   }
+  broker_summary_5d?: {
+    brokers: Broker[]
+    breadth: { top_n: number; buyer_net_idr: number; seller_net_idr: number; balance_idr: number; balance_ratio: number | null; buyer_count: number; seller_count: number }[]
+    daily?: { date: string; total_buy_idr: number; top3_net_idr: number; top5_net_idr: number; top3_seller_net_idr: number; top5_seller_net_idr: number }[]
+  } | null
+  foreign_broker_balance?: { top_n: number; buyer_net_idr: number; seller_net_idr: number; balance_idr: number; balance_ratio: number | null; buyer_count: number; seller_count: number } | null
   foreign_flow: {
     net_inflow_idr: number | null; buy_idr: number | null; sell_idr: number | null; average_foreign_share_percent: number | null; positive_days: number; negative_days: number
-    series: { date: string; net_inflow_idr: number; cumulative_net_inflow_idr: number; foreign_share_percent: number | null }[]
+    series: { date: string; buy_idr?: number; sell_idr?: number; net_inflow_idr: number; cumulative_net_inflow_idr: number; foreign_share_percent: number | null }[]
   }
   liquidity: {
     baseline_window: number; latest_volume_shares: number | null; average_volume_shares: number | null; latest_vs_average_ratio: number | null

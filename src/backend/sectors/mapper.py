@@ -7,6 +7,7 @@ from typing import Literal
 
 from ..models.flow import (
     BrokerBar,
+    BrokerDailyPoint,
     BrokerSummary,
     Breadth,
     ForeignFlow,
@@ -15,12 +16,15 @@ from ..models.flow import (
     LiquidityPoint,
 )
 from ..models.fundamentals import Fundamentals, Metric, MetricGroup, MetricPoint
-from .schemas.brokers import ForeignFlowDetails, TopBrokerList
+from .schemas.brokers import BrokerActivitySymbolDetails, ForeignFlowDetails, TopBrokerList
 from .schemas.company_reports import CompanyFinancialsDetail, CompanyValuationDetail
 from .schemas.transactions import DailyTransaction
 
 
-def broker_evidence(report: TopBrokerList | None) -> BrokerSummary:
+def broker_evidence(
+    report: TopBrokerList | None,
+    activity: Sequence[BrokerActivitySymbolDetails] = (),
+) -> BrokerSummary:
     if report is None:
         return BrokerSummary()
     buyers = sorted(report.top_buyers, key=lambda b: b.rank)
@@ -58,7 +62,37 @@ def broker_evidence(report: TopBrokerList | None) -> BrokerSummary:
                 seller_count=len(sellers[:n]),
             )
         )
-    return BrokerSummary(brokers=bars, breadth=breadth)
+    top_codes = {n: {b.broker_code for b in buyers[:n]} for n in (3, 5)}
+    seller_codes = {n: {b.broker_code for b in sellers[:n]} for n in (3, 5)}
+    daily = []
+    for row in sorted(activity, key=lambda r: r.date):
+        by_code = {b.broker_code: b for b in row.summary}
+        daily.append(BrokerDailyPoint(
+            date=row.date,
+            total_buy_idr=sum(max(b.bval, 0) for b in row.summary),
+            top3_net_idr=sum(by_code[c].nval for c in top_codes[3] if c in by_code),
+            top5_net_idr=sum(by_code[c].nval for c in top_codes[5] if c in by_code),
+            top3_seller_net_idr=sum(by_code[c].nval for c in seller_codes[3] if c in by_code),
+            top5_seller_net_idr=sum(by_code[c].nval for c in seller_codes[5] if c in by_code),
+        ))
+    return BrokerSummary(brokers=bars, breadth=breadth, daily=daily)
+
+
+def foreign_broker_balance(report: TopBrokerList | None) -> Breadth | None:
+    if report is None or not report.foreign:
+        return None
+    buyers = sorted(report.top_buyers, key=lambda b: b.rank)[:5]
+    sellers = sorted(report.top_sellers, key=lambda b: b.rank)[:5]
+    buy = sum(row.foreign_net_idr for row in buyers)
+    sell = sum(row.foreign_net_idr for row in sellers)
+    denominator = abs(buy) + abs(sell)
+    if not denominator:
+        return None
+    return Breadth(
+        top_n=5, buyer_net_idr=buy, seller_net_idr=sell,
+        balance_idr=buy + sell, balance_ratio=(buy + sell) / denominator,
+        buyer_count=len(buyers), seller_count=len(sellers),
+    )
 
 
 def foreign_evidence(rows: Sequence[ForeignFlowDetails]) -> ForeignFlow:
@@ -71,6 +105,8 @@ def foreign_evidence(rows: Sequence[ForeignFlowDetails]) -> ForeignFlow:
         series.append(
             ForeignPoint(
                 date=row.date,
+                buy_idr=row.foreign_buy_idr,
+                sell_idr=row.foreign_sell_idr,
                 net_inflow_idr=row.net_foreign_inflow,
                 cumulative_net_inflow_idr=total,
                 foreign_share_percent=row.foreign_share * 100,

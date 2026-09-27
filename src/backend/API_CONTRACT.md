@@ -54,7 +54,7 @@ Missing values are null, not zero. Percent uses percentage points (12.4 = 12.4%)
 | `flow` | Full chart block described below |
 | `fundamentals` | Four metric groups described below |
 
-Scores use `draft-v0.4`, with exact rules in `docs/SCORING.md`. They are
+Scores use `draft-v0.7`, with exact rules in `docs/SCORING.md`. They are
 research hypotheses awaiting calibration. Scores are calculated on the fixed
 20-observation flow window; changing a flow tab changes evidence only.
 `input_periods` identifies flow start/end, financial year, and valuation year.
@@ -72,22 +72,27 @@ remains the summary for backwards compatibility. Sources apply to the summary
 and its bullets. Clients group by category rather than parsing titles or prose.
 
 The Flow aggregate needs 20 trading dates, all three components, and at least
-16 dated foreign and volume-baseline observations. A score based on 16–19 of
-those dates remains numeric with a partial-coverage reason; lower coverage
+16 dated foreign, liquidity-value, and 20-day broker observations each, plus
+at least four of five recent broker observations. A score based on partial
+coverage above those minima remains numeric with a partial-coverage reason; lower coverage
 leaves it null even if all component values are present. The Combined Score
 inherits the Flow coverage note. Missing dates remain visible in the reason.
 
 ## Flow chart block
 
 `flow` contains `window, effective_start, effective_end, trading_days,
-incomplete_history, broker_summary, foreign_flow, liquidity`.
+incomplete_history, broker_summary, broker_summary_5d, foreign_broker_balance,
+foreign_flow, liquidity`.
 
 | Chart / card | Data |
 |---|---|
 | Broker bars/table | `broker_summary.brokers[] = {broker_code, side, rank, buy_idr, sell_idr, net_idr, foreign_net_idr}` |
 | Top 3/5/10 comparison | `broker_summary.breadth[] = {top_n, buyer_net_idr, seller_net_idr, balance_idr, balance_ratio, buyer_count, seller_count}` |
+| Broker scoring timeline, 20d | `broker_summary.daily[] = {date, total_buy_idr, top3_net_idr, top5_net_idr, top3_seller_net_idr, top5_seller_net_idr}`; the original top-N net fields identify ranked buyer groups, while seller fields identify ranked seller groups; empty for shorter evidence tabs |
+| Broker scoring evidence, 5d | `broker_summary_5d` has the same `brokers`, `breadth`, and `daily` shape, but uses an independent five-day ranking; present on the fixed 20-day score response and null on shorter evidence requests |
+| Foreign broker scoring balance, 20d | `foreign_broker_balance = {top_n, buyer_net_idr, seller_net_idr, balance_idr, balance_ratio, buyer_count, seller_count}` or null; ranked by foreign investor net, independent of the displayed all-investor broker list |
 | Foreign summary | `foreign_flow.net_inflow_idr, buy_idr, sell_idr, average_foreign_share_percent, positive_days, negative_days` |
-| Foreign timeline | `foreign_flow.series[] = {date, net_inflow_idr, cumulative_net_inflow_idr, foreign_share_percent}` |
+| Foreign timeline | `foreign_flow.series[] = {date, buy_idr, sell_idr, net_inflow_idr, cumulative_net_inflow_idr, foreign_share_percent}` |
 | Liquidity cards | `liquidity.baseline_window, latest_volume_shares, average_volume_shares, latest_vs_average_ratio` |
 | Liquidity timeline | `liquidity.series[] = {date, close_idr, volume_shares, average_volume_shares, volume_ratio, baseline_observations}` |
 
@@ -98,7 +103,9 @@ zero denominator returns null. Counts expose fewer-than-N results.
 
 Liquidity averages use the 20 preceding observations, excluding the plotted day.
 Insufficient history or zero mean produces a null ratio. No actual trading-value
-claim is derived from close × volume.
+claim is derived from close × volume. The Liquidity component separately uses
+that multiplication as an explicitly estimated IDR transaction-value proxy;
+the volume ratio remains chart context only.
 
 Example liquidity point:
 

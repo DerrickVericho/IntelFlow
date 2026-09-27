@@ -28,6 +28,7 @@ from ..sectors.utils import latest_provider_date
 from ..sectors.gateway import SectorsGateway
 from ..sectors.mapper import (
     broker_evidence,
+    foreign_broker_balance,
     fundamentals_evidence,
     foreign_evidence,
     liquidity_evidence,
@@ -150,6 +151,24 @@ class ResearchService:
             "broker_top",
             missing,
         )
+        broker_top_5d = None
+        five_day_rows = selected[-5:]
+        five_day_dates = {row.date for row in five_day_rows}
+        five_day_start = five_day_rows[0].date
+        if window == "20d":
+            broker_top_5d = await self._optional(
+                self.gateway.get_top_brokers(
+                    symbol,
+                    start=five_day_start.isoformat(),
+                    end=end.isoformat(),
+                    cohort="all",
+                    origin="all",
+                    foreign=False,
+                    n_brokers=10,
+                ),
+                "broker_top_5d",
+                missing,
+            )
         foreign = await self._optional(
             self.gateway.get_foreign_flow(
                 symbol,
@@ -159,7 +178,53 @@ class ResearchService:
             "foreign_flow",
             missing,
         )
+        foreign_top = None
+        if window == "20d":
+            foreign_top = await self._optional(
+                self.gateway.get_top_brokers(
+                    symbol,
+                    start=start.isoformat(),
+                    end=end.isoformat(),
+                    cohort="all",
+                    origin="all",
+                    foreign=True,
+                    n_brokers=10,
+                ),
+                "broker_foreign_top",
+                missing,
+            )
         selected_dates = {r.date for r in selected}
+        activity_rows = []
+        if window == "20d":
+            cursor = start
+            while cursor <= end:
+                chunk_end = min(cursor + timedelta(days=13), end)
+                activity = await self._optional(
+                    self.gateway.get_broker_summary(
+                        symbol, start=cursor.isoformat(), end=chunk_end.isoformat()
+                    ),
+                    "broker_activity",
+                    missing,
+                )
+                if activity:
+                    chunk = [r for r in activity.data.data if r.date in selected_dates]
+                    activity_rows.extend(chunk)
+                    sources.append(source_record(
+                        "broker_activity", activity, today=self.today(),
+                        as_of=max((r.date for r in chunk), default=None),
+                        start=cursor, end=chunk_end,
+                    ))
+                    if chunk_end < end - timedelta(days=7):
+                        sources[-1].is_stale = False
+                cursor = chunk_end + timedelta(days=1)
+            activity_rows = unique_rows(activity_rows)
+            activity_dates = {r.date for r in activity_rows}
+            if activity_dates != selected_dates:
+                missing.append(MissingInput(
+                    key="broker_activity",
+                    reason=f"Daily broker activity covers {len(activity_dates)} of {len(selected_dates)} trading dates. Missing: "
+                    + ", ".join(str(d) for d in sorted(selected_dates - activity_dates)) + ".",
+                ))
         foreign_rows = (
             unique_rows([r for r in foreign.data.data if r.date in selected_dates])
             if foreign
@@ -187,11 +252,41 @@ class ResearchService:
                     )
                 )
                 if not top.data.top_buyers and not top.data.top_sellers:
-                    missing.append(
-                        MissingInput(
-                            key="broker_top", reason="No broker rankings available"
-                        )
-                    )
+                    missing.append(MissingInput(
+                        key="broker_top", reason="No broker rankings available",
+                    ))
+        if broker_top_5d:
+            if broker_top_5d.data.start != five_day_start or broker_top_5d.data.end != end:
+                missing.append(MissingInput(
+                    key="broker_top_5d",
+                    reason="Five-day broker ranking dates differ from requested window",
+                ))
+                broker_top_5d = None
+            else:
+                sources.append(source_record(
+                    "broker_top_5d", broker_top_5d, today=self.today(),
+                    as_of=end, start=five_day_start, end=end,
+                ))
+                if not broker_top_5d.data.top_buyers and not broker_top_5d.data.top_sellers:
+                    missing.append(MissingInput(
+                        key="broker_top_5d", reason="No five-day broker rankings available",
+                    ))
+        if foreign_top:
+            if foreign_top.data.start != start or foreign_top.data.end != end or not foreign_top.data.foreign:
+                missing.append(MissingInput(
+                    key="broker_foreign_top",
+                    reason="Foreign ranking dates or investor filter differ from requested window",
+                ))
+                foreign_top = None
+            else:
+                sources.append(source_record(
+                    "broker_foreign_top", foreign_top, today=self.today(),
+                    as_of=end, start=start, end=end,
+                ))
+                if foreign_broker_balance(foreign_top.data) is None:
+                    missing.append(MissingInput(
+                        key="broker_foreign_top", reason="No foreign-ranked net broker balance available",
+                    ))
         if foreign:
             sources.append(
                 source_record(
@@ -223,10 +318,29 @@ class ResearchService:
             effective_end=end,
             trading_days=len(selected),
             incomplete_history=len(selected) < count,
-            broker_summary=broker_evidence(top.data if top else None),
+            broker_summary=broker_evidence(top.data if top else None, activity_rows),
+            broker_summary_5d=(
+                broker_evidence(
+                    broker_top_5d.data,
+                    [row for row in activity_rows if row.date in five_day_dates],
+                )
+                if broker_top_5d
+                else None
+            ),
+            foreign_broker_balance=foreign_broker_balance(foreign_top.data if foreign_top else None),
             foreign_flow=foreign_evidence(foreign_rows),
             liquidity=liquidity_evidence(history, selected_dates),
         )
+        invalid_liquidity_dates = [
+            p.date for p in evidence.liquidity.series
+            if p.close_idr <= 0 or p.volume_shares < 0
+        ]
+        if invalid_liquidity_dates:
+            missing.append(MissingInput(
+                key="liquidity.value",
+                reason="Closing price or share volume is invalid on: "
+                + ", ".join(str(d) for d in invalid_liquidity_dates) + ".",
+            ))
         if any(p.volume_ratio is None for p in evidence.liquidity.series):
             missing.append(
                 MissingInput(
@@ -300,14 +414,17 @@ class ResearchService:
             m
             for m in missing
             if m.key
-            in {"flow.window", "foreign_flow", "broker_top", "liquidity.baseline"}
+            in {"flow.window", "foreign_flow", "broker_top", "broker_top_5d", "broker_foreign_top", "broker_activity", "liquidity.value"}
         ]
         if coverage_issues:
             coverage_labels = {
                 "flow.window": "Trading history",
                 "foreign_flow": "Foreign investor flow",
                 "broker_top": "Broker rankings",
-                "liquidity.baseline": "Volume baseline",
+                "broker_top_5d": "Five-day broker rankings",
+                "broker_foreign_top": "Foreign investor broker rankings",
+                "broker_activity": "Daily broker activity",
+                "liquidity.value": "Daily liquidity value",
             }
             coverage_reason = (
                 "Flow coverage is incomplete. "
@@ -316,7 +433,7 @@ class ResearchService:
                 )
             )
             if scores.flow.value is None or any(
-                m.key in {"flow.window", "broker_top"} for m in coverage_issues
+                m.key in {"flow.window", "broker_top", "broker_top_5d", "broker_foreign_top"} for m in coverage_issues
             ):
                 scores.flow.value = None
                 scores.flow.reason = (
@@ -387,21 +504,35 @@ class ResearchService:
             ),
         )
         points = []
-        breadth = response.flow.broker_summary.breadth
-        if breadth:
+        broker_periods = [
+            ("5-day", response.flow.broker_summary_5d, "broker_top_5d"),
+            ("20-day", response.flow.broker_summary, "broker_top"),
+        ]
+        scored_breadth = [
+            (label, breadth, source_key)
+            for label, summary, source_key in broker_periods
+            if summary
+            for breadth in summary.breadth
+            if breadth.top_n in (3, 5)
+        ]
+        if scored_breadth:
             directions = {
-                b.balance_ratio > 0 for b in breadth if b.balance_ratio is not None
+                breadth.balance_ratio > 0
+                for _, breadth, _ in scored_breadth
+                if breadth.balance_ratio is not None
             }
             points.append(
                 KeyPoint(
                     kind="conflict" if len(directions) > 1 else "evidence",
-                    title="Broker concentration",
-                    text="Compare the balance of ranked net buyers and sellers.",
+                    title="Broker balance by window",
+                    text="Recent 5-day evidence carries 65% and 20-day evidence carries 35% of Broker Flow.",
                     items=[
-                        f"Top {b.top_n}: IDR {b.balance_idr:+,} across {b.buyer_count} buyers and {b.seller_count} sellers."
-                        for b in breadth
+                        f"{label} Top {breadth.top_n}: IDR {breadth.balance_idr:+,} across {breadth.buyer_count} buyers and {breadth.seller_count} sellers."
+                        for label, breadth, _ in scored_breadth
                     ],
-                    source_keys=["broker_top"],
+                    source_keys=list(dict.fromkeys(
+                        source_key for _, _, source_key in scored_breadth
+                    )),
                 )
             )
         foreign = response.flow.foreign_flow

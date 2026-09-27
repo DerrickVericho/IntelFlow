@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from statistics import median
 
-from ..models.flow import FlowEvidence
+from ..models.flow import BrokerSummary, FlowEvidence
 from ..models.fundamentals import Metric
 from ..sectors.schemas.company_reports import CompanyFinancialsDetail
 from .utils import average, clamp
@@ -12,41 +12,72 @@ MetricMap = Mapping[str, Metric]
 
 # Flow value
 def liquidity_value(flow: FlowEvidence) -> float | None:
-    ratios = [
-        point.volume_ratio
+    daily_scores = [
+        clamp(100 * point.close_idr * point.volume_shares / 5_000_000_000)
         for point in flow.liquidity.series
-        if point.volume_ratio is not None
+        if point.close_idr > 0 and point.volume_shares >= 0
     ]
-    return average([clamp(50 * ratio) for ratio in ratios])
+    return average(daily_scores)
+
+
+def _balance_direction(ratio: float, saturation: float = 0.25) -> float:
+    if ratio >= saturation:
+        return 100.0
+    if ratio <= -saturation:
+        return 0.0
+    return 50 + 50 * ratio / saturation
 
 
 def foreign_flow_value(flow: FlowEvidence) -> float | None:
     foreign = flow.foreign_flow
-    has_turnover = (
-        foreign.buy_idr is not None
-        and foreign.sell_idr is not None
-        and foreign.net_inflow_idr is not None
-        and foreign.buy_idr + foreign.sell_idr > 0
-        and bool(foreign.series)
-    )
-    if not has_turnover:
+    balance = flow.foreign_broker_balance
+    if not foreign.series or balance is None or balance.balance_ratio is None:
         return None
-
-    turnover = foreign.buy_idr + foreign.sell_idr
-    pressure = clamp(50 + 50 * foreign.net_inflow_idr / turnover)
-    positive_days = 100 * foreign.positive_days / len(foreign.series)
-
-    return clamp(0.7 * pressure + 0.3 * positive_days)
+    shares = [p.foreign_share_percent for p in foreign.series if p.foreign_share_percent is not None]
+    if not shares:
+        return None
+    participation = min(max(sum(shares) / len(shares) / 40, 0), 1)
+    direction = _balance_direction(balance.balance_ratio)
+    return round((1 - participation) * 50 + participation * direction, 2)
 
 
 def broker_flow_value(flow: FlowEvidence) -> float | None:
-    scores = [
-        clamp(50 + 50 * breadth.balance_ratio)
-        for breadth in flow.broker_summary.breadth
-        if breadth.balance_ratio is not None
-        and breadth.buyer_count >= breadth.top_n
-        and breadth.seller_count >= breadth.top_n
-    ]
+    short = flow.broker_summary_5d
+    if short is None or len(short.daily) < 4:
+        return None
+    short_value = _broker_window_value(short)
+    long_value = _broker_window_value(flow.broker_summary)
+    if short_value is None or long_value is None:
+        return None
+    return round(0.65 * short_value + 0.35 * long_value, 2)
+
+
+def _broker_window_value(summary: BrokerSummary) -> float | None:
+    if not summary.daily:
+        return None
+    slices = {b.top_n: b for b in summary.breadth}
+    if any(n not in slices or slices[n].balance_ratio is None
+           or slices[n].buyer_count < n or slices[n].seller_count < n
+           for n in (3, 5)):
+        return None
+    total = sum(p.total_buy_idr for p in summary.daily)
+    if total <= 0:
+        return None
+    scores = []
+    for n, target in ((3, 0.05), (5, 0.08)):
+        net = [
+            p.top3_net_idr + p.top3_seller_net_idr if n == 3
+            else p.top5_net_idr + p.top5_seller_net_idr
+            for p in summary.daily
+        ]
+        direction = _balance_direction(slices[n].balance_ratio, saturation=0.20)
+        positive = sum(value > 0 for value in net)
+        negative = sum(value < 0 for value in net)
+        consistency = 100 * positive / (positive + negative) if positive + negative else 50.0
+        period_balance = sum(net)
+        strength = min(abs(period_balance) / total / target, 1)
+        concentration = 50 + 50 * strength if period_balance > 0 else 50 - 50 * strength
+        scores.append(0.5 * direction + 0.3 * consistency + 0.2 * concentration)
     return average(scores)
 
 

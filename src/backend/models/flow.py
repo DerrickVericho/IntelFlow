@@ -28,13 +28,25 @@ class Breadth(Record):
     seller_count: int
 
 
+class BrokerDailyPoint(Record):
+    date: date
+    total_buy_idr: int
+    top3_net_idr: int
+    top5_net_idr: int
+    top3_seller_net_idr: int
+    top5_seller_net_idr: int
+
+
 class BrokerSummary(Record):
     brokers: list[BrokerBar] = Field(default_factory=list)
     breadth: list[Breadth] = Field(default_factory=list)
+    daily: list[BrokerDailyPoint] = Field(default_factory=list)
 
 
 class ForeignPoint(Record):
     date: date
+    buy_idr: int
+    sell_idr: int
     net_inflow_idr: int
     cumulative_net_inflow_idr: int
     foreign_share_percent: float | None
@@ -74,5 +86,7 @@ class FlowEvidence(Record):
     trading_days: int = 0
     incomplete_history: bool = False
     broker_summary: BrokerSummary = Field(default_factory=BrokerSummary)
+    broker_summary_5d: BrokerSummary | None = None
+    foreign_broker_balance: Breadth | None = None
     foreign_flow: ForeignFlow = Field(default_factory=ForeignFlow)
     liquidity: Liquidity = Field(default_factory=Liquidity)

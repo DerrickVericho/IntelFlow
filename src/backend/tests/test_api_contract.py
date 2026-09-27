@@ -67,7 +67,7 @@ def test_intel_score_response_contract(client: TestClient, harness: Harness) -> 
         )
     assert set(body["flow"]) == {
         "window", "effective_start", "effective_end", "trading_days",
-        "incomplete_history", "broker_summary", "foreign_flow", "liquidity",
+        "incomplete_history", "broker_summary", "broker_summary_5d", "foreign_broker_balance", "foreign_flow", "liquidity",
     }
     assert body["flow"]["window"] == "20d"
     assert body["flow"]["trading_days"] == 20
@@ -92,7 +92,11 @@ def test_flow_response_contract(client: TestClient, window: str, count: int) -> 
     assert flow["trading_days"] == count
     assert len(flow["foreign_flow"]["series"]) == count
     assert len(flow["liquidity"]["series"]) == count
-    assert set(flow["broker_summary"]) == {"brokers", "breadth"}
+    assert set(flow["broker_summary"]) == {"brokers", "breadth", "daily"}
+    assert len(flow["broker_summary"]["daily"]) == (20 if window == "20d" else 0)
+    assert (flow["broker_summary_5d"] is not None) == (window == "20d")
+    if flow["broker_summary_5d"]:
+        assert len(flow["broker_summary_5d"]["daily"]) == 5
 
 
 def test_price_history_response_contract(client: TestClient) -> None:
