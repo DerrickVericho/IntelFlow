@@ -6,5 +6,9 @@ import { App } from './App'
 import './theme.css'
 
 createRoot(document.getElementById('root')!).render(
-  <QueryClientProvider client={createQueryClient()}><BrowserRouter><App /></BrowserRouter></QueryClientProvider>,
+  <QueryClientProvider client={createQueryClient()}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </QueryClientProvider>,
 )
