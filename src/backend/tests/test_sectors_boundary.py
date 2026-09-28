@@ -36,7 +36,10 @@ def test_client_sends_documented_daily_request() -> None:
         params={"start": "2025-05-01", "end": "2025-05-14"},
         timeout=client.timeout,
     )
-    assert session.headers == {"Authorization": "test-key", "Accept": "application/json"}
+    assert session.headers == {
+        "Authorization": "test-key",
+        "Accept": "application/json",
+    }
 
 
 def test_company_report_sends_only_requested_sections() -> None:
@@ -56,23 +59,56 @@ def test_company_report_sends_only_requested_sections() -> None:
 @pytest.mark.parametrize(
     "method,args,kwargs,path,params",
     [
-        ("get_top_brokers", ("BBCA",), {"start": "2025-05-01", "end": "2025-05-14", "foreign": True},
-         "broker-summary/BBCA/top/", {"start": "2025-05-01", "end": "2025-05-14", "foreign": "true"}),
-        ("get_foreign_flow", ("BBCA",), {"start": "2025-05-01", "end": "2025-05-14"},
-         "foreign-flow/BBCA/", {"start": "2025-05-01", "end": "2025-05-14"}),
-        ("get_broker_summary", ("BBCA",), {"broker_code": "mg"},
-         "broker-summary/BBCA/", {"broker_code": "MG"}),
-        ("get_shareholder_composition", ("BBCA",), {"year": 2025},
-         "company/shareholders-composition/BBCA/", {"year": 2025}),
-        ("get_revenue_segments", ("BBCA",), {"financial_year": 2025},
-         "company/get-segments/BBCA/", {"financial_year": 2025}),
-        ("get_free_float", (), {"sector": "financials"},
-         "free-float/", {"sector": "financials"}),
+        (
+            "get_top_brokers",
+            ("BBCA",),
+            {"start": "2025-05-01", "end": "2025-05-14", "foreign": True},
+            "broker-summary/BBCA/top/",
+            {"start": "2025-05-01", "end": "2025-05-14", "foreign": "true"},
+        ),
+        (
+            "get_foreign_flow",
+            ("BBCA",),
+            {"start": "2025-05-01", "end": "2025-05-14"},
+            "foreign-flow/BBCA/",
+            {"start": "2025-05-01", "end": "2025-05-14"},
+        ),
+        (
+            "get_broker_summary",
+            ("BBCA",),
+            {"broker_code": "mg"},
+            "broker-summary/BBCA/",
+            {"broker_code": "MG"},
+        ),
+        (
+            "get_shareholder_composition",
+            ("BBCA",),
+            {"year": 2025},
+            "company/shareholders-composition/BBCA/",
+            {"year": 2025},
+        ),
+        (
+            "get_revenue_segments",
+            ("BBCA",),
+            {"financial_year": 2025},
+            "company/get-segments/BBCA/",
+            {"financial_year": 2025},
+        ),
+        (
+            "get_free_float",
+            (),
+            {"sector": "financials"},
+            "free-float/",
+            {"sector": "financials"},
+        ),
     ],
 )
 def test_client_maps_supported_operations(
-    method: str, args: tuple[str, ...], kwargs: dict[str, Any],
-    path: str, params: dict[str, Any]
+    method: str,
+    args: tuple[str, ...],
+    kwargs: dict[str, Any],
+    path: str,
+    params: dict[str, Any],
 ) -> None:
     session = Mock()
     session.headers = {}
@@ -88,14 +124,44 @@ def test_client_maps_supported_operations(
     "operation,payload",
     [
         ("get_daily", lambda raw: raw._get_daily()),
-        ("get_free_float", lambda _raw: [{"symbol": "TEST.JK", "company_name": "Test", "free_float": 0.4}]),
-        ("get_broker_summary", lambda raw: raw._get_broker_summary(start="2026-09-01", end="2026-09-14")),
-        ("get_top_brokers", lambda raw: raw._get_top_brokers(start="2026-09-01", end="2026-09-14")),
-        ("get_foreign_flow", lambda raw: raw._get_foreign_flow(start="2026-09-01", end="2026-09-14")),
-        ("get_company_report", lambda raw: raw._get_company_report(sections=["overview", "financials", "valuation"])),
-        ("get_shareholder_composition", lambda raw: raw._get_shareholder_composition(year=2026)),
-        ("get_revenue_segments", lambda _raw: {"symbol": "TEST.JK", "financial_year": 2025,
-                                               "revenue_breakdown": [{"value": 100, "source": "Test", "target": "Sales"}]}),
+        (
+            "get_free_float",
+            lambda _raw: [
+                {"symbol": "TEST.JK", "company_name": "Test", "free_float": 0.4}
+            ],
+        ),
+        (
+            "get_broker_summary",
+            lambda raw: raw._get_broker_summary(start="2026-09-01", end="2026-09-14"),
+        ),
+        (
+            "get_top_brokers",
+            lambda raw: raw._get_top_brokers(start="2026-09-01", end="2026-09-14"),
+        ),
+        (
+            "get_foreign_flow",
+            lambda raw: raw._get_foreign_flow(start="2026-09-01", end="2026-09-14"),
+        ),
+        (
+            "get_company_report",
+            lambda raw: raw._get_company_report(
+                sections=["overview", "financials", "valuation"]
+            ),
+        ),
+        (
+            "get_shareholder_composition",
+            lambda raw: raw._get_shareholder_composition(year=2026),
+        ),
+        (
+            "get_revenue_segments",
+            lambda _raw: {
+                "symbol": "TEST.JK",
+                "financial_year": 2025,
+                "revenue_breakdown": [
+                    {"value": 100, "source": "Test", "target": "Sales"}
+                ],
+            },
+        ),
     ],
 )
 def test_provider_shapes_accept_future_fields_and_require_identity(
@@ -124,7 +190,9 @@ def test_provider_shapes_accept_future_fields_and_require_identity(
         (500, SectorsUpstreamError),
     ],
 )
-def test_client_maps_upstream_errors_without_retry(status: int, error_type: type[Exception]) -> None:
+def test_client_maps_upstream_errors_without_retry(
+    status: int, error_type: type[Exception]
+) -> None:
     session = Mock()
     session.headers = {}
     session.get.return_value.status_code = status
@@ -153,7 +221,9 @@ def test_client_rejects_invalid_symbol_before_request() -> None:
     session.get.assert_not_called()
 
 
-def test_gateway_keeps_raw_unknown_fields_but_exposes_typed_data(harness: Harness) -> None:
+def test_gateway_keeps_raw_unknown_fields_but_exposes_typed_data(
+    harness: Harness,
+) -> None:
     harness.transport.rows[0]["future_provider_field"] = {"new": True}
     first = asyncio.run(harness.gateway.get_daily("TEST"))
     assert not hasattr(first.data[0], "future_provider_field")
@@ -164,7 +234,9 @@ def test_gateway_keeps_raw_unknown_fields_but_exposes_typed_data(harness: Harnes
     assert harness.transport.calls["get_daily"] == 1
 
 
-@pytest.mark.parametrize("change", ["missing_volume", "wrong_symbol", "negative_volume"])
+@pytest.mark.parametrize(
+    "change", ["missing_volume", "wrong_symbol", "negative_volume"]
+)
 def test_gateway_rejects_invalid_provider_data_without_caching(
     harness: Harness, change: str
 ) -> None:
@@ -198,5 +270,7 @@ def test_cache_write_failure_is_typed(harness: Harness) -> None:
 
 def test_provider_request_date_validation_precedes_fetch(harness: Harness) -> None:
     with pytest.raises(SectorsValidationError):
-        asyncio.run(harness.gateway.get_daily("TEST", start="2026-09-23", end="2026-09-24"))
+        asyncio.run(
+            harness.gateway.get_daily("TEST", start="2026-09-23", end="2026-09-24")
+        )
     assert harness.transport.calls == {}

@@ -17,7 +17,9 @@ from src.backend.tests.fixtures import FixtureTransport, TODAY
 
 
 @pytest.mark.redis_integration
-@pytest.mark.skipif(not os.getenv("TEST_REDIS_URL"), reason="Set TEST_REDIS_URL for real Redis")
+@pytest.mark.skipif(
+    not os.getenv("TEST_REDIS_URL"), reason="Set TEST_REDIS_URL for real Redis"
+)
 def test_real_redis_cache_survives_gateway_recreation() -> None:
     async def scenario() -> None:
         redis = Redis.from_url(os.environ["TEST_REDIS_URL"], decode_responses=True)
@@ -29,9 +31,13 @@ def test_real_redis_cache_survives_gateway_recreation() -> None:
         transport.rows[0]["future_field"] = "retained"
         try:
             await redis.ping()
-            first = CachedSectorsGateway(transport, RedisCache(redis), settings, utc_today=lambda: TODAY)
+            first = CachedSectorsGateway(
+                transport, RedisCache(redis), settings, utc_today=lambda: TODAY
+            )
             initial = await first.get_daily("TEST", **params)
-            second = CachedSectorsGateway(transport, RedisCache(redis), settings, utc_today=lambda: TODAY)
+            second = CachedSectorsGateway(
+                transport, RedisCache(redis), settings, utc_today=lambda: TODAY
+            )
             restored = await second.get_daily("test.jk", **params)
             assert restored.data == initial.data
             assert transport.calls["get_daily"] == 1

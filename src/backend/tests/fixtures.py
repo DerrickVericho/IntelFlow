@@ -54,6 +54,7 @@ class FixtureTransport:
         **params: Any,
     ) -> dict[str, Any]:
         foreign = params.get("foreign", False)
+
         def row(i: int, side: int) -> dict[str, Any]:
             foreign_net = side * (10000 - i * 500) * (2 if side == 1 else 1)
             return dict(

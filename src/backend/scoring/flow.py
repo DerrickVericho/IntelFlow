@@ -43,13 +43,18 @@ def calculate_flow_score(flow: FlowEvidence) -> Score:
     score = weighted(components, require_all=True)
     foreign_dates = {point.date for point in flow.foreign_flow.series}
     liquidity_dates = {
-        point.date for point in flow.liquidity.series
+        point.date
+        for point in flow.liquidity.series
         if point.close_idr > 0 and point.volume_shares >= 0
     }
+
     broker_dates = {point.date for point in flow.broker_summary.daily}
-    short_broker_dates = {
-        point.date for point in flow.broker_summary_5d.daily
-    } if flow.broker_summary_5d else set()
+    short_broker_dates = (
+        {point.date for point in flow.broker_summary_5d.daily}
+        if flow.broker_summary_5d
+        else set()
+    )
+
     if (
         flow.window != "20d"
         or flow.trading_days < FULL_WINDOW_OBSERVATIONS

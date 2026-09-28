@@ -85,7 +85,9 @@ def test_missing_shareholder_snapshots_are_empty_not_fabricated(
 
 
 @pytest.mark.parametrize("year", [2024, 2025])
-def test_historical_shareholder_year_reaches_provider(harness: Harness, year: int) -> None:
+def test_historical_shareholder_year_reaches_provider(
+    harness: Harness, year: int
+) -> None:
     response = asyncio.run(harness.service.shareholders("TEST", year))
     assert response.year == year
     assert response.series[0].date.year == year
@@ -178,7 +180,9 @@ def test_one_missing_foreign_date_keeps_scored_result_with_coverage_warning(
     assert "partial coverage" in response.scores.combined.reason.lower()
 
 
-def test_partial_volume_baseline_does_not_block_idr_liquidity_score(harness: Harness) -> None:
+def test_partial_volume_baseline_does_not_block_idr_liquidity_score(
+    harness: Harness,
+) -> None:
     harness.transport.rows = harness.transport.rows[-35:]
     response = asyncio.run(harness.service.research("TEST"))
     assert all(
@@ -193,7 +197,10 @@ def test_sixteen_volume_baselines_keep_scored_result(harness: Harness) -> None:
     harness.transport.rows = harness.transport.rows[-36:]
     response = asyncio.run(harness.service.research("TEST"))
     assert response.flow.trading_days == 20
-    assert sum(point.volume_ratio is not None for point in response.flow.liquidity.series) == 16
+    assert (
+        sum(point.volume_ratio is not None for point in response.flow.liquidity.series)
+        == 16
+    )
     assert response.scores.flow.value is not None
     assert response.scores.combined.value is not None
     assert response.status == "partial"
@@ -213,19 +220,25 @@ def test_fifteen_foreign_dates_are_below_scoring_minimum(harness: Harness) -> No
 
     harness.transport._get_foreign_flow = with_gap
     response = asyncio.run(harness.service.research("TEST"))
-    assert all(component.value is not None for component in response.scores.flow.components)
+    assert all(
+        component.value is not None for component in response.scores.flow.components
+    )
     assert response.scores.flow.value is None
     assert response.scores.combined.value is None
     assert "15 of 20" in response.scores.flow.reason
 
 
-def test_one_missing_broker_day_keeps_score_with_coverage_warning(harness: Harness) -> None:
+def test_one_missing_broker_day_keeps_score_with_coverage_warning(
+    harness: Harness,
+) -> None:
     original = harness.transport._get_broker_summary
     missing_date = harness.transport.days[-3].isoformat()
 
     def with_gap(**params: Any) -> dict[str, Any]:
         payload = original(**params)
-        payload["data"] = [row for row in payload["data"] if row["date"] != missing_date]
+        payload["data"] = [
+            row for row in payload["data"] if row["date"] != missing_date
+        ]
         return payload
 
     harness.transport._get_broker_summary = with_gap
@@ -301,11 +314,15 @@ def test_foreign_scoring_uses_foreign_net_not_overall_net(harness: Harness) -> N
     harness.transport._get_top_brokers = divergent_ranking
     response = asyncio.run(harness.service.research("TEST"))
     assert response.flow.foreign_broker_balance.balance_ratio == 0.25
-    foreign_component = next(c for c in response.scores.flow.components if c.key == "foreign_flow")
+    foreign_component = next(
+        c for c in response.scores.flow.components if c.key == "foreign_flow"
+    )
     assert foreign_component.value == 87.5  # Fixture participation: 30% / 40%.
 
 
-def test_missing_foreign_ranking_does_not_fabricate_flow_score(harness: Harness) -> None:
+def test_missing_foreign_ranking_does_not_fabricate_flow_score(
+    harness: Harness,
+) -> None:
     original = harness.transport._get_top_brokers
 
     def without_foreign_ranking(**params: Any) -> dict[str, Any]:
@@ -323,27 +340,49 @@ def test_missing_foreign_ranking_does_not_fabricate_flow_score(harness: Harness)
     assert "broker_foreign_top" in {item.key for item in response.missing_inputs}
 
 
-def test_fundamental_scores_average_available_recent_observations(harness: Harness) -> None:
+def test_fundamental_scores_average_available_recent_observations(
+    harness: Harness,
+) -> None:
     original = harness.transport._get_company_report
 
     def with_sparse_fundamentals(sections: list[str]) -> dict[str, Any]:
         payload = original(sections)
         if "financials" in payload:
-            by_year = {row["year"]: row for row in payload["financials"]["historical_financials"]}
-            by_year[2023].update(earnings=-1000, operating_cash_flow=100, free_cash_flow=-100)
-            by_year[2024].update(earnings=-1000, operating_cash_flow=100, free_cash_flow=None)
-            by_year[2025].update(earnings=-1000, operating_cash_flow=-100, free_cash_flow=-100)
+            by_year = {
+                row["year"]: row
+                for row in payload["financials"]["historical_financials"]
+            }
+            by_year[2023].update(
+                earnings=-1000, operating_cash_flow=100, free_cash_flow=-100
+            )
+            by_year[2024].update(
+                earnings=-1000, operating_cash_flow=100, free_cash_flow=None
+            )
+            by_year[2025].update(
+                earnings=-1000, operating_cash_flow=-100, free_cash_flow=-100
+            )
         if "valuation" in payload:
-            by_year = {row["year"]: row for row in payload["valuation"]["historical_valuation"]}
+            by_year = {
+                row["year"]: row for row in payload["valuation"]["historical_valuation"]
+            }
             for year in (2024, 2025, 2026):
                 by_year[year].update(pe=None, pb=None, pcf=None)
-            for year, value in ((2022, 1), (2023, 1.2), (2024, 2), (2025, None), (2026, 10)):
+            for year, value in (
+                (2022, 1),
+                (2023, 1.2),
+                (2024, 2),
+                (2025, None),
+                (2026, 10),
+            ):
                 by_year[year]["ps"] = value
         return payload
 
     harness.transport._get_company_report = with_sparse_fundamentals
     response = asyncio.run(harness.service.research("TEST"))
-    components = {component.key: component.value for component in response.scores.fundamental.components}
+    components = {
+        component.key: component.value
+        for component in response.scores.fundamental.components
+    }
     assert components["cash_flow"] == 40  # Two positive observations / five available.
     assert components["valuation"] == 23.09  # Two comparable PS observations / two.
     assert response.scores.fundamental.value is not None

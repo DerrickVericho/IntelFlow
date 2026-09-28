@@ -10,6 +10,7 @@ from .utils import average, clamp
 
 MetricMap = Mapping[str, Metric]
 
+
 # Flow value
 def liquidity_value(flow: FlowEvidence) -> float | None:
     daily_scores = [
@@ -33,7 +34,11 @@ def foreign_flow_value(flow: FlowEvidence) -> float | None:
     balance = flow.foreign_broker_balance
     if not foreign.series or balance is None or balance.balance_ratio is None:
         return None
-    shares = [p.foreign_share_percent for p in foreign.series if p.foreign_share_percent is not None]
+    shares = [
+        p.foreign_share_percent
+        for p in foreign.series
+        if p.foreign_share_percent is not None
+    ]
     if not shares:
         return None
     participation = min(max(sum(shares) / len(shares) / 40, 0), 1)
@@ -56,9 +61,13 @@ def _broker_window_value(summary: BrokerSummary) -> float | None:
     if not summary.daily:
         return None
     slices = {b.top_n: b for b in summary.breadth}
-    if any(n not in slices or slices[n].balance_ratio is None
-           or slices[n].buyer_count < n or slices[n].seller_count < n
-           for n in (3, 5)):
+    if any(
+        n not in slices
+        or slices[n].balance_ratio is None
+        or slices[n].buyer_count < n
+        or slices[n].seller_count < n
+        for n in (3, 5)
+    ):
         return None
     total = sum(p.total_buy_idr for p in summary.daily)
     if total <= 0:
@@ -66,14 +75,19 @@ def _broker_window_value(summary: BrokerSummary) -> float | None:
     scores = []
     for n, target in ((3, 0.05), (5, 0.08)):
         net = [
-            p.top3_net_idr + p.top3_seller_net_idr if n == 3
-            else p.top5_net_idr + p.top5_seller_net_idr
+            (
+                p.top3_net_idr + p.top3_seller_net_idr
+                if n == 3
+                else p.top5_net_idr + p.top5_seller_net_idr
+            )
             for p in summary.daily
         ]
         direction = _balance_direction(slices[n].balance_ratio, saturation=0.20)
         positive = sum(value > 0 for value in net)
         negative = sum(value < 0 for value in net)
-        consistency = 100 * positive / (positive + negative) if positive + negative else 50.0
+        consistency = (
+            100 * positive / (positive + negative) if positive + negative else 50.0
+        )
         period_balance = sum(net)
         strength = min(abs(period_balance) / total / target, 1)
         concentration = 50 + 50 * strength if period_balance > 0 else 50 - 50 * strength
@@ -128,7 +142,9 @@ def cash_flow_value(metrics: MetricMap) -> float | None:
             value = observations.get(year)
             if value is None:
                 continue
-            scores.append(clamp(50 * value) if key == "cash_conversion" else _level_value(value))
+            scores.append(
+                clamp(50 * value) if key == "cash_conversion" else _level_value(value)
+            )
     return average(scores)
 
 
@@ -136,9 +152,17 @@ def valuation_value(
     metrics: MetricMap,
     financials: CompanyFinancialsDetail | None,
 ) -> float | None:
-    statements = sorted(financials.historical_financials, key=lambda row: row.year) if financials else []
+    statements = (
+        sorted(financials.historical_financials, key=lambda row: row.year)
+        if financials
+        else []
+    )
     valuation_years = sorted(
-        {int(point.period) for key in ("pe", "pb", "ps", "pcf") for point in metrics[key].series},
+        {
+            int(point.period)
+            for key in ("pe", "pb", "ps", "pcf")
+            for point in metrics[key].series
+        },
         reverse=True,
     )[:3]
     scores: list[float] = []
@@ -154,18 +178,30 @@ def valuation_value(
             year = int(point.period)
             if year not in valuation_years or point.value is None or point.value <= 0:
                 continue
-            statement = next((row for row in reversed(statements) if row.year <= year), None)
+            statement = next(
+                (row for row in reversed(statements) if row.year <= year), None
+            )
             denominator = getattr(statement, denominator_name, None)
-            if statement is None or year - statement.year > 1 or denominator is None or denominator <= 0:
+            if (
+                statement is None
+                or year - statement.year > 1
+                or denominator is None
+                or denominator <= 0
+            ):
                 continue
             past = [
-                earlier.value for earlier in observations
-                if int(earlier.period) < year and earlier.value is not None and earlier.value > 0
+                earlier.value
+                for earlier in observations
+                if int(earlier.period) < year
+                and earlier.value is not None
+                and earlier.value > 0
             ]
             if len(past) < 2:
                 continue
             historical_median = median(past)
-            scores.append(clamp(100 * historical_median / (historical_median + point.value)))
+            scores.append(
+                clamp(100 * historical_median / (historical_median + point.value))
+            )
 
     return average(scores)
 
