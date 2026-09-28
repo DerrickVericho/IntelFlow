@@ -12,6 +12,7 @@ scoring hypothesis or real-time provider coverage for every IDX ticker.
 | Flow/Fundamental/Combined cards | `scores.*.value`, components, reasons, version, periods | Ready; null is explicit when minimum evidence is absent |
 | Top accumulating/distributing brokers | `flow.broker_summary.brokers[]` | Ready; signed IDR, buy/sell values, ranks and broker codes |
 | Top 3/5/10 comparison | `flow.broker_summary.breadth[]` | Ready; buyer and seller sums, counts, signed balance and ratio |
+| Recent broker scoring evidence | `flow.broker_summary_5d` | Ready; independently ranked 5-day Top 3/5 evidence, weighted 65% against 35% for 20-day evidence |
 | 1D/5D/20D evidence tabs | `/flow?window=...` | Ready; same block as initial research response |
 | Foreign flow chart and cards | `flow.foreign_flow.series[]`, totals, day counts | Ready; investor origin kept distinct from broker origin |
 | Liquidity chart and cards | `flow.liquidity.series[]`, latest volume/ratio | Ready; 20 preceding observations required for each baseline |
@@ -61,10 +62,13 @@ frontend stack used for that verification has since been removed.
 
 Remaining work before a production/demo claim:
 
-1. Run an explicitly authorized live Sectors smoke test. No paid calls were
-   made during this implementation. Offline fixtures do not prove current
-   provider availability, account permissions, or credits.
-2. Calibrate `draft-v0.2` against representative liquid/illiquid tickers and
+1. Run a live Sectors smoke test for the full IntelScore inputs. Historical
+   shareholder queries for SINI in 2025 and 2024 were checked separately on
+   2026-09-27: both returned 12 snapshots, with some historical shareholder
+   counts or changes null. This does not validate other symbols or full score
+   coverage. Offline fixtures do not prove current provider availability,
+   account permissions, or credits for the remaining endpoints.
+2. Calibrate `draft-v0.7` against representative liquid/illiquid tickers and
    sectors. Numeric scoring is implemented but remains a research hypothesis.
 3. Annual financial history cannot generate a quarterly history chart. The
    latest quarterly YoY values have no confirmed quarter label in the schema.

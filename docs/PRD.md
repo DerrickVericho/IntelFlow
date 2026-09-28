@@ -48,8 +48,8 @@ receiving a buy/sell recommendation.
 3. Product retrieves and synthesizes dated Sectors data for that symbol.
 4. User sees Flow Score, Fundamental Score, Combined Score, key points, and the
    evidence behind each result.
-5. If the nice-to-have modules are available, the same symbol can be explored
-   in dedicated Shareholder Composition and Stockchart pages.
+5. Shareholder Composition has an independent ticker search; entering or
+   changing its symbol does not change the IntelScore research context.
 
 ## Must have
 
@@ -65,6 +65,13 @@ receiving a buy/sell recommendation.
 - Combined Conviction Score: 0–100.
 - Independent score breakdowns and evidence.
 - Data freshness indicators.
+- Light, dark, and system appearance, with a persistent user preference and
+  equivalent readability across research, charts, tables, and error states.
+- A company-led research header with dated last close and change from the
+  previous observed trading close, latest volume, preceding average volume and
+  volume ratio, using available dated inputs.
+- Plain-English data availability explanations and a ticker input on error
+  screens so users can continue researching another company.
 - Broker accumulation/distribution, foreign-flow, and liquidity evidence within
   IntelScore for the supported analysis windows.
 - Fundamental evidence covering the shallow cross-sector metrics defined in
@@ -74,8 +81,11 @@ receiving a buy/sell recommendation.
 
 ## Nice to have
 
-- Shareholder Composition page with a monthly stacked bar chart and
-  shareholder-count changes for the selected symbol.
+- Shareholder Composition page with a monthly category-stacked bar chart,
+  All/Local/Foreign and Shares/Composition controls, selected-month category
+  detail, and a separate shareholder-count chart for its independently selected
+  symbol. Historical years are selectable. Missing count fields do not hide
+  available composition data.
 - Stockchart page with 1-week, 1-month, and 3-month ranges, price/volume data,
   default top-three buyer and seller broker overlays, and user-selectable
   brokers.
@@ -106,8 +116,18 @@ Primary endpoint contracts and credit costs are maintained in
 - broker activity and top buyers/sellers;
 - foreign flow;
 - daily price and volume data for liquidity and market context; and
+- daily broker buy and net values for 20-observation accumulation evidence;
 - company report `financials` and `valuation` sections for a shallow,
   cross-sector fundamental check.
+
+Flow Score liquidity uses closing price × daily share volume as an estimated
+IDR transaction value against a Rp5 billion daily benchmark. Broker Flow
+combines independently ranked 5-day and 20-day evidence at 65% and 35%.
+Foreign Flow
+uses the foreign-investor-ranked top brokers' net balance, weighted by foreign
+participation in stock turnover. Broker accumulation uses all-investor ranked
+brokers and their daily activity. Local in the evidence UI means domestic
+investor origin and is not the retail broker cohort.
 
 Shareholder composition, company revenue segments, ownership details, and peer
 analysis remain nice-to-have inputs and are not required by the initial
@@ -145,3 +165,39 @@ IntelScore workflow.
 
 Detailed formula, normalization, and missing-data behavior live in
 [SCORING.md](./SCORING.md).
+
+
+## Revision v2 presentation decisions (2026-09-26)
+
+Use modern Tailwind styling with persistent Light/Dark/System appearance.
+Present Combined Score as Overall Score on the left; stack Flow and Fundamental
+Scores on the right. Show component values and weights immediately. Replace
+technical disclosures, raw field paths and repeated source links with concise
+business labels and directly visible evidence tables. Attribute SectorsAPI in a
+compact footer with reporting years, observation dates and Not Financial Advice.
+These presentation changes do not change formulas, provider endpoints or weights.
+
+
+## Decision dashboard refinement (2026-09-27)
+
+The IntelScore first view must identify the current score condition, strongest
+available support, main limitation, coverage/freshness, and whether score change
+can be assessed. Use explicit status bands and categorical data confidence with
+rules documented in SCORING.md. These are research interpretations, not automated
+trade recommendations. Keep the existing score formulas and API data unchanged.
+
+Show compact 1M/3M price trends using the existing price-history endpoint, with
+actual coverage. Current foreign flow is limited to the aggregate observations.
+Historical score snapshots and 1Y history are not in the contract: show unavailable
+states, never inferred improvements or invented charts. A future history feature
+would need a separately approved API/data change.
+
+## Investor broker view refinement (2026-09-27)
+
+The broker chart and net-activity table offer All, Foreign and Local investor
+views. Foreign net uses the provider's per-broker foreign net; local net is
+derived as total net minus foreign net. These are display filters over the
+brokers already returned in the all-investor ranking, so they are explicitly
+scoped to that list. Flow Score and Top 3/5/10 balance remain all-investor
+measures. The redundant broker trading-values table and prior-average/baseline
+count columns in Daily volume are removed.

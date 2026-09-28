@@ -1,183 +1,210 @@
-# IntelFlow UI Specification
+# IntelFlow UI specification
 
-| Field | Value |
-|---|---|
-| Status | Draft / living document |
-| Priority | IntelScore MVP first |
-| Target | Desktop-first web application |
-| Wireframe | [IntelFlow — Draft 1 Wireframe](https://www.figma.com/design/W6bVLXxogPXpcd43p6NkmE) |
+Status: decision dashboard implemented, 2026-09-27. This specification supersedes the
+previous disclosure-based layout and earlier single-theme wireframes.
 
-The current Figma draft contains the four screen shells and shared
-sidebar/content layout. Detailed content remains to be completed after the
-Figma tool limit resets and this information architecture is reviewed. The
-frontend MVP can proceed without that reset using the documented wireframe and
-the implemented backend contract as its design/data references.
+## Design and implementation
 
-The generated IntelScore visual reference is stored at
-[`docs/assets/intelflow-intelscore-wireframe-v1.png`](./assets/intelflow-intelscore-wireframe-v1.png).
-It uses sample evidence for layout illustration only. The backend now provides
-`draft-v0.2` numeric scores when adequate inputs exist; unavailable scores are
-null. The implemented contract takes precedence over sample values or labels
-in the image: liquidity is share volume, financial histories are annual, and
-quarterly YoY snapshots have no fabricated quarter label or sparkline.
+The interface uses Tailwind CSS v4 through the official Vite plugin. Semantic
+colors are mapped with `@theme inline` in `app/theme.css`; reusable control
+recipes live in `components/ui.ts`. Page and component layouts use utility
+classes. The retired CSS Modules are removed.
 
-![IntelFlow IntelScore wireframe](./assets/intelflow-intelscore-wireframe-v1.png)
+The visual direction is modern Swiss: pale-blue surfaces in Light, layered navy
+surfaces in Dark, one blue brand accent,
+Helvetica Neue / Arial, tabular financial values, clear hierarchy and 1px
+section rules. Panels use 16px corners; controls use 12px corners. Body text is
+16px, secondary text and dates are at least 14px in research content. Meaning never depends
+on color alone. Product copy, code, tests and documentation are English.
 
-## Information architecture
+The frontend-design skill informs the shared visual system. The taste skill
+informs Home and the redesign audit; its marketing patterns are not applied to
+data-heavy research. Home, IntelScore, and Shareholders have usable navigation.
 
-The persistent left sidebar contains:
+## Appearance
 
-1. **Home** — product overview and entry point.
-2. **IntelScore** — the hackathon MVP and primary symbol research experience.
-3. **Shareholder Composition** — nice-to-have monthly ownership analysis.
-4. **Stockchart** — nice-to-have price, volume, and broker-flow exploration.
+- Light, Dark and System are available through the persistent Appearance control.
+- First visit follows the OS. Preference persists under `intelflow-theme`.
+- A head script applies the theme before rendering. Storage failures fall back
+  to the system preference.
+- Explicit Light appearance uses `color-scheme: only light` so browser automatic
+  darkening cannot turn surfaces dark while chart labels retain light colors.
+- Period controls use dedicated high-contrast foreground/background tokens in
+  both appearances. SVG chart labels use an explicit appearance token and a
+  rendered fill rule so broker codes, axes and legends stay readable.
+- ECharts reads the same semantic variables and updates existing instances.
+- Switching appearance preserves ticker, query cache and evidence period. It
+  does not perform a data request. OS and cross-tab changes are synchronized.
+- Desktop has a 224px sidebar; below 768px navigation moves above the content.
+  Research stays inside the viewport; wide tables and charts scroll locally.
 
-The current desktop wireframe uses a 1440 × 1024 frame, a 240 px sidebar, and a
-1200 px main-content region. The first visual pass uses Inter typography, a
-small CSS-variable token layer, and CSS Modules. The visual direction is a dark,
-professional research dashboard: visual emphasis serves the readable analysis,
-not a trading signal. Final brand polish can follow the validated MVP.
+## Routes
 
-## Approved MVP interaction and hierarchy
+- `/`: concise product overview, prominent ticker search and a real BBCA example.
+- `/intel-score`: focused company search entry.
+- `/stocks/:symbol/intel-score`: company research.
+- Input accepts four letters and an optional `.JK` suffix, normalized to uppercase.
+  Syntax validation does not prove the company exists.
+- `/shareholders`: independent shareholder symbol search entry.
+- `/shareholders/:symbol`: monthly shareholder composition and count. The old
+  `/stocks/:symbol/shareholders` URL redirects here.
+- `?window=1d` and `?window=5d` select flow evidence. Omission means 20D.
+  Back/forward restores the period; unsupported values explicitly fall back.
+- Home performs no market request before ticker submission or opening the example.
 
-- Home accepts an exact IDX symbol and navigates to the selected IntelScore URL;
-  it does not offer autocomplete until a reliable ticker directory exists.
-- Home offers BBCA as a real IDX ticker example. Opening it requests the
-  backend; no synthetic market data is bundled with the running UI.
-- Ticker input accepts exactly four letters, case-insensitively, with optional
-  `.JK`; malformed input is rejected before a research request.
-- IntelScore is ordered as header/freshness, three separate scores and research
-  state, key points, flow evidence, fundamental evidence, then source detail.
-- Score breakdowns and dated evidence render inline for the MVP. A drawer or a
-  dedicated detail route is deferred.
-- Shareholder Composition and Stockchart are labelled `Coming later` and do not
-  masquerade as functioning analysis until their screens are delivered.
-- The UI must use explicit text and numbers for score and data states; color is
-  supplementary, not the only way to communicate status.
+## Shareholder composition
 
-## Home
+- Shareholders has its own always-visible navigation item and symbol search.
+  Opening it from IntelScore does not carry the IntelScore ticker; searching in
+  Shareholders never opens IntelScore or requests its aggregate. The page
+  requests the existing IntelFlow `/shareholders?year=` endpoint for the chosen
+  year; it never contacts Sectors directly from the browser. Changing year
+  requests that historical year. Supported years come from the response and do
+  not imply observations for every month.
+- One bar represents each available monthly snapshot. Bars stack the reported
+  shareholder categories, combining matching `_l` and `_f` fields in All,
+  using `_l` in Local and `_f` in Foreign. Investor origin and bar display
+  mode are independent controls. Shares shows actual category holdings;
+  Composition % divides each category by the sum of available category
+  holdings for that month and investor origin. Empty months remain empty.
+- The category panel stays alongside the chart on wide screens and below it
+  on narrow screens. It shows the selected available month, issued shares,
+  local and foreign totals, and each category's exact holdings and share of
+  reported category holdings. Selecting a bar or the labeled month control
+  updates the panel. Missing category values are not treated as zero. If
+  category holdings do not match the reported investor total, the page explains
+  the gap and never presents the categories as a complete share of issued stock.
+- Shareholder count is one full-width chart without a second selected-month
+  panel. Its heading includes the count and reported change for the selected
+  month. Null historical counts and absent months remain gaps. If counts are
+  missing for an entire year, the composition chart remains visible while the
+  count section explains the missing data. A provider 404 for a symbol/year
+  dataset appears as an empty state; true upstream failures have a separate
+  shareholder-data error. Both charts and controls use theme-aware,
+  high-contrast labels. Internal field names, request identifiers, retrieval
+  diagnostics, provider errors and credentials never appear in the UI.
 
-Purpose: explain IntelFlow quickly and move the user into a symbol-first
-analysis.
+## Company market header
 
-Required content:
+Ticker search lives in the global top navigation, including loading and error
+states. The compact market header shows company name, ticker, sector/subsector,
+last close in full IDR, signed nominal/percentage change and comparison dates.
+The numeric direction is also written as Up, Down or Unchanged.
 
-- product name and one-sentence flow-first proposition;
-- concise explanation that flow is the primary signal and fundamentals are the
-  supporting context;
-- prominent IDX symbol search/input and IntelScore call to action;
-- short “how it works” explanation for Flow, Fundamental, and Combined scores;
-- non-advisory disclaimer and Sectors data attribution.
+A statistics row shows latest volume in shares, the preceding 20-observation
+average volume, volume/average, and previous close. These fields come directly
+from the aggregate backend response; no new provider request or score calculation
+is introduced. The average excludes the latest observation. Missing values
+remain Unavailable, missing change says Change unavailable, and zero stays zero.
 
-## IntelScore — MVP
+## Score hierarchy
 
-Purpose: present a complete, synthesized research view for one ticker without
-requiring users to assemble raw Sectors responses themselves.
+- Overall Score is the user-facing name for the backend Combined Score. Its
+  card is prominent on the left, spanning both right-hand rows at 1280px and wider.
+- Flow Score is top-right; Fundamental Score is bottom-right. All three align
+  to the same outer grid and stack in this order on narrow screens.
+- Components use aligned labels and values, labeled horizontal meters, secondary
+  weights, and short visible definitions. Weak/Neutral/Positive/Strong/Unavailable
+  appear in text; the palette uses amber and blue as well as financial red/green.
+- Every numeric component meter uses the same blue fill within an appearance,
+  independent of its Weak/Neutral/Positive/Strong label. The track and fill have
+  explicit colors in Light and Dark. A valid zero keeps a small blue start
+  marker; an unavailable component has no fill.
+- Missing scores display N/A and Not calculated, with the backend reason visible.
+  Available components can coexist with an unavailable aggregate.
+- Flow scores always use 20 observations; evidence-period controls affect charts
+  only. The score date range stays visible.
+- Component definitions describe IDR liquidity against the Rp5 billion daily
+  benchmark, foreign-ranked broker net balance weighted by foreign investor
+  participation, and independently ranked 5-day/20-day all-investor broker
+  balance, daily consistency, and concentration. Broker windows are weighted
+  65% recent and 35% longer-term.
+- With 20 trading observations and all three components, Flow and Overall
+  Scores remain numeric when foreign, liquidity-value, or daily-broker coverage
+  is 16–19 of the 20 dates. Their cards explain partial coverage; data confidence is Low.
+  Fewer than 16 dated observations or an unavailable component keeps N/A.
+- Calculation versions and retrieval diagnostics remain in the API and working
+  documentation, not in the product UI. Current formulas are in SCORING.md.
 
-Required content:
+## Decision summary and trends
 
-- symbol/company header, symbol switcher, last-updated time, and source-period
-  summary;
-- separate Flow Score, Fundamental Score, and Combined Score values from 0–100;
-- concise key points describing the strongest evidence, conflicts, and missing
-  data without producing a buy/sell recommendation;
-- broker accumulation/distribution evidence for the supported windows;
-- foreign-flow and liquidity context;
-- shallow growth, earnings, cash-flow, and valuation support;
-- visible source dates and an explanation/drill-down path for each score;
-- explicit loading, invalid-symbol, partial-data, stale-data, upstream-error,
-  and no-data states.
+Overall Score carries a large value, an explicit status and meaning, a Flow and
+Fundamental summary, key driver, main risk and categorical data confidence.
+Confidence rules and score bands are documented in SCORING.md. Score direction
+is explicitly unavailable when historical snapshots are absent. The Overall
+Score card does not show empty prior-week or prior-month comparison rows, and
+historical scores must not be inferred from price changes.
 
-Scores must never rely on color alone. Numeric values, labels, and supporting
-text remain visible for accessibility and interpretation.
+A separate Change over time section has keyboard-accessible 1M/3M/1Y controls.
+Its selected controls use explicit accent foreground and background colors in
+both themes so their labels remain readable during pointer and keyboard use.
+The default 1M price query and on-demand 3M query use the existing backend
+price-history endpoint. Prices preserve exact dated closes and incomplete/stale
+coverage flags. No request is sent for unsupported 1Y. Failures or fewer than
+two observations show informative empty states without removing aggregate scores.
 
-## Shareholder Composition — nice to have
+The 1M foreign-flow chart uses only available aggregate observations within the
+last 30 calendar days ending at the flow's effective end. Missing dates in the
+observed price calendar remain gaps. The subset and dates are explicit. 3M/1Y
+foreign flow and Overall Score history are unavailable in the current contract;
+they show no chart. Range changes never calculate scores or fetch a new aggregate.
 
-Purpose: show how ownership composition changes from month to month for the
-selected symbol.
+## Key points and flow
 
-Expected content:
+- Key points contains at most five concise facts grouped as Flow, Fundamental,
+  Risk and Data Quality. They format typed response values, not parsed narrative.
+  Currency uses compact Rp units (for example Rp244.1B net sell); ranked broker
+  imbalance is not described as whole-market net flow. Annual earnings and OCF
+  retain their years. Driver/risk and data confidence explain the main limitations.
+- All-investor broker columns use provider ranks. The Foreign/Local control
+  changes the broker chart and net-activity table together. Foreign net uses
+  `foreign_net_idr`; local net is `net_idr - foreign_net_idr` when both values
+  exist. Zero net and rows without a foreign breakdown are omitted in those
+  views. Buyers and sellers are re-ranked separately, up to 10 per side, only
+  among the brokers in the provider's all-investor top buyer/seller response.
+  These views must not be called market-wide top foreign or local rankings.
+  The filter makes no request and does not change scores.
+- Each chart column pairs buyer and seller at the displayed rank. Buyers extend
+  above zero; sellers below. Codes sit at bar ends; missing sides remain missing.
+  A rank pair does not imply a transaction between brokers.
+- Broker net activity, daily foreign flow and daily volume remain directly
+  visible in labeled, keyboard-scrollable tables with sticky headings. The
+  broker trading-values table is removed. Daily volume shows date, volume and
+  volume/preceding-average ratio; the prior-average and baseline-count columns
+  are removed.
+- Top 3/5/10 balances remain labeled all-investor evidence, independent of the
+  broker display filter. They describe ranked participants, not whole-exchange
+  net flow. Broker origin remains distinct from investor origin.
+- Foreign and volume charts retain gaps for missing data. Liquidity uses shares
+  and the preceding-observation average, excluding the current observation.
 
-- monthly stacked bar chart;
-- legend for the available shareholder categories;
-- year or supported-period control;
-- shareholder-count change and notable month-over-month movements;
-- freshness indicator appropriate to monthly data.
+## Fundamentals and attribution
 
-The exact categories must follow available normalized data rather than be
-invented by the frontend.
+- Growth, Earnings, Cash Flow and Valuation each show their component score,
+  an available annual chart, and a table of latest and historical values.
+- Annual years are columns. Quarterly snapshots remain explicitly undated, with
+  no invented quarter/history, and are excluded from scoring.
+- Missing metric reasons remain visible. Negative ratios are not called cheap.
+- There are no disclosure toggles or source-anchor links in the research UI.
+- A compact footer says Powered by SectorsAPI and
+  For research purposes only — not investment advice. It lists
+  the financial-history year span, latest report, observation dates/reporting
+  periods, and stale flags. It replaces detailed source cards.
+- Source keys, retrieval timestamps and calculation identifiers remain in API
+  responses for traceability, but are not displayed as internal product labels.
 
-## Stockchart — nice to have
+## Availability, errors and accessibility
 
-Purpose: inspect market movement together with broker participation for one
-symbol.
+- Partial-data warnings appear once in plain-English groups. Raw field paths
+  and duplicate availability disclosures are not rendered.
+- Partial and stale states can coexist. Stale sources are named, with dates
+  retained in the attribution footer; an absent stale flag is not a live-data claim.
+- Loading replaces previous ticker/period evidence. The global ticker input remains available on full-page errors. A 404 means No data found, not a confirmed invalid ticker.
+- Network/server errors offer manual retry. 404/422/429 are not retried unchanged.
+  Internal error messages and request IDs stay out of the visible UI.
+- A flow-only error stays within its section. Failed refreshes label retained data.
+- No polling, automatic retries, focus refetch or reconnect refetch.
+- Labeled inputs, skip navigation, visible focus, chart text alternatives,
+  table captions/headers, keyboard scrolling and reduced motion are supported.
 
-Expected content:
-
-- range selector for 1 week, 1 month, and 3 months;
-- price and volume visualization;
-- top three buyer and top three seller brokers selected by default for the
-  active range;
-- broker selector that lets users add or remove displayed brokers;
-- clearly differentiated price, buyer, and seller series with readable
-  tooltips and dates;
-- a warning when history is incomplete for the requested range.
-
-## Shared interaction rules
-
-- The selected symbol lives in the URL and remains consistent across pages.
-- Navigation must make MVP versus nice-to-have scope clear during development;
-  unfinished routes should not appear functional.
-- The frontend displays backend-derived scores and evidence and never recreates
-  scoring formulas.
-- Fresh, stale, partial, and unavailable data are visibly distinct.
-- Charts require text summaries or accessible labels for their main insight.
-- Mobile behavior is deferred until the desktop MVP works, but layouts should
-  avoid assumptions that make later responsive work unnecessarily difficult.
-
-## Open UI decisions
-
-- Final brand palette and score-state colors.
-- Exact IntelScore chart hierarchy and density.
-- Broker-selector interaction once the expected number of brokers is known.
-- Responsive navigation behavior after the desktop MVP is validated.
-
-## Implemented MVP decisions — 2026-09-23
-
-- Home (`/`) and symbol entry (`/intel-score`) lead to
-  `/stocks/:symbol/intel-score`. Symbols are trimmed, uppercased and stripped of
-  an optional `.JK`. Validation checks syntax only, matching the backend rule;
-  it does not claim that a ticker exists. There is no default real ticker fetch.
-- The selected flow evidence window is shareable as `?window=1d` or `5d`;
-  omission means `20d`. Browser back/forward restores the selection. Unsupported
-  windows explicitly fall back to 20D. Scores and key points remain on the fixed
-  20-observation research window and are labelled accordingly.
-- Dark navy surfaces, mint/blue/lavender score accents and locally bundled Inter
-  implement the documented dark direction. Colors distinguish sections, not
-  scoring thresholds. The generated light wireframe remains a hierarchy reference.
-- Key points precede flow evidence. Broker bars show signed IDR with all supplied
-  ranked rows; top-3/5/10 comparisons show actual participant counts. Foreign
-  cumulative flow and volume/baseline charts include textual summaries and exact
-  value tables. Liquidity is shares, never inferred trading value.
-- Fundamental groups use a two-column desktop grid for readable metric labels.
-  Each group charts one supplied annual metric; all metrics expand inline to
-  show their annual values, missing reasons and source links. Undated quarterly
-  YoY snapshots have no chart or invented quarter label. Gaps stay null.
-- Score breakdowns expand inline with backend values, base weights, reasons and
-  source references. Null scores say `Not calculated`; null evidence says
-  `Unavailable`. Numeric direction is explicitly not a claim of improvement.
-- The source table separates observation date, financial/valuation period,
-  effective window, retrieval timestamp (WIB), and backend stale flags. Partial
-  and stale notices can coexist. A source without a stale flag is described as
-  `Not flagged stale`, not as real-time or guaranteed fresh.
-- Loading replaces evidence when switching tickers/windows. A failed flow request
-  stays inside its section; the scores remain available. HTTP 404 is `No data
-  found`, 422 is `Invalid request`, and network/503 errors provide a retry and
-  request ID when supplied. No automatic retry or focus/reconnect refetch runs.
-- Home has no automatic market-data request. Opening the BBCA example or
-  submitting a ticker uses the same backend research route.
-- Sidebar is 240px on wide screens; compact screens wrap to top navigation and
-  single-column cards. Keyboard focus, a skip link, form labels, textual status,
-  reduced motion and chart alternatives are included. Mobile polish is deferred.
-
-Run instructions and test-only verification live in [FRONTEND.md](./FRONTEND.md).
+Run and verification instructions: [FRONTEND.md](./FRONTEND.md).

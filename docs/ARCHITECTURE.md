@@ -233,8 +233,8 @@ frontend never knows about this provider constraint.
 ## Frontend responsibilities
 
 The frontend MVP is implemented using Vite, React, TypeScript, React Router,
-TanStack Query, modular Apache ECharts (SVG renderer), and CSS Modules. The npm
-package and lockfile live at the repository root; the Vite root is `src/frontend`.
+TanStack Query, modular Apache ECharts (SVG renderer), and Tailwind CSS v4 through
+the official Vite plugin. The npm package and lockfile live at the repository root; the Vite root is `src/frontend`.
 Routes are `/`, `/intel-score`, and `/stocks/:symbol/intel-score`. The research
 route is lazy-loaded so Home does not load chart code before navigation.
 
@@ -245,11 +245,14 @@ fallback. No browser configuration includes Sectors credentials or provider URLs
 
 Query keys include symbol and, for evidence, the window. One initial aggregate
 request supplies scores, fundamentals and 20D evidence. The 1D/5D controls fetch
-only the flow endpoint; returning to 20D reuses the aggregate. Query cancellation
+only the flow endpoint; returning to 20D reuses the aggregate. A separate
+`price-history` query key contains symbol and 1M/3M range. It consumes the existing
+price endpoint without changing score state. Unsupported 1Y sends no request. Query cancellation
 passes AbortSignal to fetch; data is not carried over between query keys.
 Browser query cache freshness (five minutes) is independent of backend source
 staleness. Retry, focus refetch and reconnect refetch are disabled to avoid
-implicit repeat requests. Missing values remain null and are formatted only.
+implicit repeat requests. Missing values remain null. The frontend presentation layer maps existing scores
+to documented bands and coverage categories without altering score arithmetic.
 
 The running frontend has no synthetic data mode. Unit and browser tests isolate
 the HTTP contract with test-only response data; the normal Compose stack uses
