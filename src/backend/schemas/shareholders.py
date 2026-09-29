@@ -17,8 +17,8 @@ class ShareholderPoint(Record):
     holdings: dict[str, int | None]
     total_local: int
     total_foreign: int
-    shareholder_count: int
-    shareholder_count_change: int
+    shareholder_count: int | None
+    shareholder_count_change: int | None
 
 
 class ShareholderResponse(Envelope):

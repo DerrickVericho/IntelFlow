@@ -41,7 +41,7 @@ def weighted(
     reason = (
         None
         if len(available) == len(components)
-        else "Unavailable components; see component reasons"
+        else "Some components need more data. Open the score breakdown for details."
     )
 
     return Score(value=value, components=components, reason=reason)

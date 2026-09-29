@@ -380,12 +380,19 @@ Accept: application/json
 | <code>data[].shares_number</code> | integer | Number of issued shares |
 | <code>data[].*_l</code> / <code>*_f</code> | integer | Local/foreign category holdings |
 | <code>data[].total_l</code> / <code>total_f</code> | integer | Total local/foreign holdings |
-| <code>data[].numbers_of_shareholders</code> | integer | Number of shareholders |
-| <code>data[].change_in_shareholders</code> | integer | Change in shareholder count |
+| <code>data[].numbers_of_shareholders</code> | integer or null | Number of shareholders, sometimes not reported in historical snapshots |
+| <code>data[].change_in_shareholders</code> | integer or null | Change in shareholder count, sometimes not reported in historical snapshots |
 
 Investor categories include insurance, corporate, pension fund, financial
 institutions, individual, mutual fund, securities companies, foundation, and
 other.
+
+Verified against the provider for SINI: the 2025 and 2024 year queries each
+return 12 monthly composition rows, while shareholder-count fields are null in
+some historical rows. IntelFlow preserves these nulls and still displays their
+category holdings. A provider 404 for a shareholder symbol/year dataset becomes
+an empty IntelFlow shareholder result; transport or provider failures remain
+errors. The supported year range does not guarantee data for every symbol/year.
 
 ~~~json
 {
@@ -420,6 +427,13 @@ other.
 Returns per-broker daily activity for one symbol, grouped by trading date. The
 data includes value, lots, frequency, average prices, net flow, and the foreign
 investor portion.
+
+The 20-observation Flow Score requests this endpoint in successive windows of
+at most 14 calendar days. It uses each dated broker's `bval` and `nval` for
+top-3/top-5 consistency and concentration, alongside the separate ranked top
+broker endpoint. This adds one paid call per uncached chunk (normally two or
+three for 20 trading observations). Missing chunks remain gaps in score
+coverage; broker code or broker origin does not identify investor origin.
 
 #### Request
 
@@ -491,6 +505,15 @@ Ranks the brokers accumulating and distributing one symbol.
 <code>origin</code> uses the broker registry classification, while
 <code>foreign=true</code> ranks by the foreign-investor portion of each broker's
 flow.
+
+For the fixed 20-observation score, IntelFlow requests this endpoint three
+times: `foreign=false` for independent 20-day and 5-day all-investor broker
+rankings, and `foreign=true` for the 20-day Foreign Flow component. All use
+`cohort=all`, `origin=all`, and `n_brokers=10`; the date range and foreign flag
+make each a distinct cached dataset. With `foreign=true`, the ranking follows
+`foreign_net_idr`; `net_idr` still describes all-investor net and must not be
+used as the foreign score's ranked balance. Shorter evidence tabs request only
+their selected `foreign=false` ranking.
 
 #### Request
 

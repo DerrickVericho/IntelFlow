@@ -4,7 +4,6 @@ import ast
 from collections.abc import Iterator
 from pathlib import Path
 
-
 BACKEND_ROOT = Path(__file__).parents[1]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 

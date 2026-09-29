@@ -10,7 +10,7 @@ from .flow import calculate_flow_score
 from .fundamentals import calculate_fundamental_score
 from .utils import weighted
 
-VERSION = "draft-v0.2"
+VERSION = "draft-v0.7"
 
 
 def calculate(

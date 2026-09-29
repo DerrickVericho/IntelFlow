@@ -53,16 +53,19 @@ class FixtureTransport:
         end: str,
         **params: Any,
     ) -> dict[str, Any]:
+        foreign = params.get("foreign", False)
+
         def row(i: int, side: int) -> dict[str, Any]:
+            foreign_net = side * (10000 - i * 500) * (2 if side == 1 else 1)
             return dict(
                 rank=i + 1,
                 broker_code=("B" if side == 1 else "S") + str(i),
                 net_idr=side * (10000 - i * 500) * (2 if side == 1 else 1),
                 buy_idr=50000,
                 sell_idr=50000 - side * (10000 - i * 500) * (2 if side == 1 else 1),
-                foreign_net_idr=100,
-                foreign_buy_idr=200,
-                foreign_sell_idr=100,
+                foreign_net_idr=foreign_net if foreign else 100,
+                foreign_buy_idr=max(foreign_net, 0) if foreign else 200,
+                foreign_sell_idr=max(-foreign_net, 0) if foreign else 100,
             )
 
         return dict(
@@ -71,7 +74,7 @@ class FixtureTransport:
             end=end,
             origin="all",
             cohort="all",
-            foreign=False,
+            foreign=foreign,
             top_buyers=[row(i, 1) for i in range(10)],
             top_sellers=[row(i, -1) for i in range(10)],
         )

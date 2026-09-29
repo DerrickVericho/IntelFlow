@@ -39,6 +39,14 @@ The repeated list wrappers do not need separate business abstractions. A
 Pydantic `RootModel[list[...]]` may be used for flat array responses such as
 daily transactions and free float.
 
+The Flow evidence contract keeps a 20-day `broker_summary` and independently
+ranked `broker_summary_5d`. Each keeps a dated `daily[]` row with
+all-broker buy IDR and ranked top-3/top-5 buyer and seller group net IDR for
+each retrieved trading date. Foreign-flow points include daily participation,
+buy, and sell IDR. A separately requested `foreign=true` top-broker ranking
+provides the top-five foreign investor net balance. These fields make the
+`draft-v0.7` score inputs traceable without publishing raw provider payloads.
+
 ## Company Report
 
 Do not create one exhaustive model for all eight sections. IntelFlow should
@@ -154,3 +162,23 @@ have no confirmed quarter label and must have an empty historical series.
 Shareholder `supported_years` means a supported query range, not confirmed
 availability for the selected symbol. No quarterly financial history or
 synthetic complete ownership breakdown is inferred from the samples.
+Historical shareholder-count and change fields can be null even when monthly
+category holdings are complete. Provider and public models retain null rather
+than converting it to zero or rejecting the composition row.
+
+### Company context and structured insights (2026-09-26)
+
+`models/research.py` adds nullable `close_date`, `previous_close_idr`,
+`previous_close_date`, `change_idr`, and `change_percent` to `Company`. These are
+derived from the existing daily observations and serialized through the research
+response. The prior date means the previous observed trading date. Invalid or
+absent comparison prices yield null changes, not zero. No Sectors provider model
+or cache payload is changed.
+
+`KeyPoint` adds `category` (`flow`, `fundamental`, or `coverage`) and `items`, a
+list of supporting statements. Existing `kind`, `title`, `text`, and source keys
+remain. Public frontend types and the synthetic contract fixture include these
+additive fields. The decision dashboard now selects up to five concise insights
+from existing typed evidence fields, without splitting backend-generated prose.
+Score bands, drivers, risks and coverage confidence are presentation rules
+documented in SCORING.md; numerical scores and response models are unchanged.

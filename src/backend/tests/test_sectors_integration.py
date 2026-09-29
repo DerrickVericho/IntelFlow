@@ -19,7 +19,10 @@ from src.backend.tests.conftest import make_settings
 
 
 @pytest.mark.live_sectors
-@pytest.mark.skipif(os.getenv("RUN_SECTORS_TESTS") != "1", reason="Set RUN_SECTORS_TESTS=1 for paid Sectors integration")
+@pytest.mark.skipif(
+    os.getenv("RUN_SECTORS_TESTS") != "1",
+    reason="Set RUN_SECTORS_TESTS=1 for paid Sectors integration",
+)
 def test_live_daily_response_matches_gateway_contract() -> None:
     if not os.getenv("SECTORS_API_KEY"):
         pytest.fail("SECTORS_API_KEY must be set in the process environment")
@@ -40,15 +43,22 @@ def test_live_daily_response_matches_gateway_contract() -> None:
                 result = await gateway.get_daily("BBCA", **params)
                 assert result.data, "Expected historical BBCA observations"
                 assert all(row.symbol == "BBCA.JK" for row in result.data)
-                assert all(date(2025, 5, 1) <= row.date <= date(2025, 5, 14) for row in result.data)
+                assert all(
+                    date(2025, 5, 1) <= row.date <= date(2025, 5, 14)
+                    for row in result.data
+                )
                 assert all(row.close > 0 and row.volume >= 0 for row in result.data)
                 if redis:
                     cached = json.loads(await redis.get(key))
                     assert cached["payload"]
                     assert await redis.ttl(key) > 0
                     offline = Mock()
-                    offline.get_daily.side_effect = AssertionError("Cache miss after live fetch")
-                    restored = await CachedSectorsGateway(offline, RedisCache(redis), settings).get_daily("BBCA", **params)
+                    offline.get_daily.side_effect = AssertionError(
+                        "Cache miss after live fetch"
+                    )
+                    restored = await CachedSectorsGateway(
+                        offline, RedisCache(redis), settings
+                    ).get_daily("BBCA", **params)
                     assert restored.data == result.data
                     offline.get_daily.assert_not_called()
                 else:

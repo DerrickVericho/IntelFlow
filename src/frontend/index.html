@@ -3,9 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0c121c" />
-    <meta name="description" content="IntelFlow — flow-first research for Indonesian equities. Dated flow evidence and fundamental context, in one view." />
+    <meta name="theme-color" content="#0b192b" />
+    <script>
+      ;(() => {
+        let preference = 'system'
+        try {
+          const saved = localStorage.getItem('intelflow-theme')
+          if (saved === 'light' || saved === 'dark') preference = saved
+        } catch {}
+        const theme =
+          preference === 'system'
+            ? matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : preference
+        document.documentElement.dataset.themePreference = preference
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme === 'light' ? 'only light' : 'dark'
+        document.querySelector('meta[name="theme-color"]').content =
+          theme === 'dark' ? '#0b192b' : '#edf3fa'
+      })()
+    </script>
+    <meta
+      name="description"
+      content="IntelFlow — flow-first research for Indonesian equities. Dated flow evidence and fundamental context, in one view."
+    />
     <title>IntelFlow · IDX research</title>
   </head>
-  <body><div id="root"></div><script type="module" src="/app/main.tsx"></script></body>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/app/main.tsx"></script>
+  </body>
 </html>
