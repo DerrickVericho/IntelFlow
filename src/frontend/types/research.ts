@@ -161,6 +161,25 @@ export interface PriceResponse extends Envelope {
     market_cap: number | null
   }[]
 }
+export interface BrokerSeriesResponse extends Envelope {
+  range: '1m' | '3m'
+  effective_start: string
+  effective_end: string
+  incomplete_history: boolean
+  default_brokers: string[]
+  selected_brokers: string[]
+  available_brokers: string[]
+  series: {
+    broker_code: string
+    points: {
+      date: string
+      buy_idr: number | null
+      sell_idr: number | null
+      net_idr: number | null
+      cumulative_net_idr: number | null
+    }[]
+  }[]
+}
 export interface ShareholderPoint {
   date: string
   shares_number: number

@@ -34,7 +34,7 @@ function mount(path = '/stocks/BBCA/intel-score') {
 }
 function mockApi(data: Research = structuredClone(testResponse) as Research) {
   const fetcher = vi.fn((url: string) =>
-    reply(url.includes('/price-history?') ? priceResponse() : data),
+    reply(url.includes('/price-history?') ? priceResponse('3m') : data),
   )
   vi.stubGlobal('fetch', fetcher)
   return fetcher
@@ -90,7 +90,7 @@ test('flow tabs request only evidence; scores remain from aggregate and 20D reus
   const data = structuredClone(testResponse) as Research
   const fetcher = vi.fn((url: string) =>
     url.includes('/price-history?')
-      ? reply(priceResponse())
+      ? reply(priceResponse('3m'))
       : url.includes('/flow?')
         ? reply({ ...data, flow: { ...data.flow, window: '5d', trading_days: 5 } })
         : reply(data),
@@ -101,7 +101,7 @@ test('flow tabs request only evidence; scores remain from aggregate and 20D reus
   await userEvent.click(screen.getByRole('button', { name: '5D' }))
   await screen.findByText('5 observed trading days')
   expect(fetcher).toHaveBeenCalledTimes(3)
-  expect(fetcher.mock.calls[2][0]).toBe('/api/v1/stocks/BBCA/flow?window=5d')
+  expect(fetcher.mock.calls.map((call) => call[0])).toContain('/api/v1/stocks/BBCA/flow?window=5d')
   expect(screen.getByTestId('score-flow')).toHaveTextContent(String(testResponse.scores.flow.value))
   await userEvent.click(screen.getByRole('button', { name: '20D' }))
   await screen.findByText('20 observed trading days')

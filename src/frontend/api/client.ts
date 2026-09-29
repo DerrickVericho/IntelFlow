@@ -1,4 +1,5 @@
 import type {
+  BrokerSeriesResponse,
   FlowResponse,
   PriceResponse,
   Research,
@@ -101,6 +102,36 @@ export async function getPriceHistory(symbol: string, range: '1m' | '3m', signal
       502,
       'INVALID_RESPONSE',
       'The backend returned unreadable or mismatched price history.',
+    )
+  }
+  return data
+}
+export async function getBrokerSeries(symbol: string, range: '1m' | '3m', signal: AbortSignal) {
+  const data = await get<BrokerSeriesResponse>(
+    `${encodeURIComponent(symbol)}/broker-series?range=${range}`,
+    signal,
+  )
+  if (
+    data.symbol !== symbol ||
+    data.range !== range ||
+    !Array.isArray(data.default_brokers) ||
+    !Array.isArray(data.series) ||
+    data.series.some(
+      (series) =>
+        !/^[A-Z0-9]{2}$/.test(series.broker_code) ||
+        !Array.isArray(series.points) ||
+        series.points.some(
+          (point) =>
+            !/^\d{4}-\d{2}-\d{2}$/.test(point.date) ||
+            (point.net_idr !== null && !Number.isFinite(point.net_idr)) ||
+            (point.cumulative_net_idr !== null && !Number.isFinite(point.cumulative_net_idr)),
+        ),
+    )
+  ) {
+    throw new ApiError(
+      502,
+      'INVALID_RESPONSE',
+      'The backend returned unreadable or mismatched broker history.',
     )
   }
   return data

@@ -16,9 +16,9 @@ export function priceResponse(range: '1m' | '3m' = '1m'): PriceResponse {
       date: point.date,
       close: point.close_idr,
       volume: point.volume_shares,
-      open: null,
-      high: null,
-      low: null,
+      open: point.close_idr - 5,
+      high: point.close_idr + 15,
+      low: point.close_idr - 20,
       market_cap: null,
     })),
   }

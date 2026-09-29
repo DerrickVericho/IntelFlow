@@ -56,6 +56,9 @@ test('Home opens the BBCA example and renders backend score fields', async ({ pa
   await page.getByRole('link', { name: 'Explore BBCA' }).click()
   await expect(page).toHaveURL(/\/stocks\/BBCA\/intel-score$/)
   await expect(page.getByText('Test response company')).toBeVisible()
+  await expect(
+    page.getByRole('img', { name: /^Three-month share price candlesticks/ }),
+  ).toBeVisible()
   expect(calls).toHaveLength(2)
   for (const key of ['flow', 'fundamental', 'combined'] as const) {
     await expect(page.getByTestId(`score-${key}`)).toContainText(
@@ -85,7 +88,9 @@ test('broker investor filter updates chart and net table without another request
   const table = flow.getByRole('region', { name: 'Broker net activity table' })
   const chart = flow.getByRole('img', { name: /brokers paired by rank/ })
   await expect(chart).toBeVisible()
-  await expect(page.getByRole('img', { name: /Share price, IDR/ })).toBeVisible()
+  await expect(
+    page.getByRole('img', { name: /^Three-month share price candlesticks/ }),
+  ).toBeVisible()
   const initialCalls = calls.length
   const initialFlowScore = await page.getByTestId('score-flow').textContent()
 
@@ -314,37 +319,23 @@ test('decision dashboard hierarchy, reporting footer and direct evidence work at
   expect(calls).toHaveLength(2)
 })
 
-test('trend periods use existing price ranges and never invent missing score or foreign history', async ({
-  page,
-}) => {
+test('change over time shows only a fixed three-month candlestick chart', async ({ page }) => {
   const calls: string[] = []
   page.on('request', (r) => {
     if (r.url().includes('/api/v1/')) calls.push(r.url())
   })
   await page.goto('/stocks/BBCA/intel-score')
   const trends = page.getByRole('region', { name: 'Change over time' })
-  await expect(trends.getByRole('img', { name: /^Share price/ })).toBeVisible()
-  await expect(trends.getByRole('img', { name: /^Daily foreign net flow/ })).toBeVisible()
   await expect(
-    page.getByRole('article', { name: 'Overall Score trend' }).getByRole('img'),
-  ).toHaveCount(0)
-  await trends.getByRole('button', { name: '3M', exact: true }).focus()
-  await page.keyboard.press('Enter')
-  await expect(trends.getByRole('button', { name: '3M', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
-  await expect(trends.getByRole('img', { name: /^Share price/ })).toBeVisible()
-  await expect(trends.getByText('3M foreign-flow history unavailable')).toBeVisible()
+    trends.getByRole('img', { name: /^Three-month share price candlesticks/ }),
+  ).toBeVisible()
+  await expect(trends.getByText('Share price · 3M')).toBeVisible()
+  await expect(trends.getByText(/Daily foreign flow/)).toHaveCount(0)
+  await expect(trends.getByText(/Buyer B1 ·|Seller S1 ·/)).toHaveCount(0)
+  await expect(trends.getByRole('article', { name: 'Overall Score trend' })).toHaveCount(0)
+  await expect(trends.getByRole('button', { name: /1M|3M/ })).toHaveCount(0)
   expect(calls.filter((c) => c.includes('price-history?range=3m'))).toHaveLength(1)
-  const count = calls.length
-  await trends.getByRole('button', { name: '1Y', exact: true }).click()
-  await expect(trends.getByText('1Y price history unavailable')).toBeVisible()
-  await expect(trends.getByRole('img')).toHaveCount(0)
-  expect(calls).toHaveLength(count)
-  await trends.getByRole('button', { name: '1M', exact: true }).click()
-  await expect(trends.getByRole('img', { name: /^Share price/ })).toBeVisible()
-  expect(calls).toHaveLength(count)
+  expect(calls.filter((c) => c.includes('broker-series'))).toHaveLength(0)
   await expect(page.getByTestId('score-combined')).toContainText(
     String(testResponse.scores.combined.value),
   )
@@ -464,9 +455,7 @@ test('every numeric component has a visible bar in light and dark themes', async
   }
 })
 
-test('period labels and button boundaries remain readable in light and dark themes', async ({
-  page,
-}) => {
+test('period button boundaries remain readable in light and dark themes', async ({ page }) => {
   await page.goto('/stocks/BBCA/intel-score')
   const trends = page.getByRole('region', { name: 'Change over time' })
   const flow = page.getByRole('region', { name: 'Flow activity' })
@@ -513,7 +502,6 @@ test('period labels and button boundaries remain readable in light and dark them
   for (const theme of ['light', 'dark']) {
     await page.getByRole('combobox', { name: 'Color theme' }).selectOption(theme)
     await assertPeriodContrast()
-    await trends.getByRole('button', { name: '3M', exact: true }).click()
     await flow.getByRole('button', { name: '5D', exact: true }).click()
     await expect(flow.getByText('5 observed trading days')).toBeVisible()
     await assertPeriodContrast()
@@ -523,13 +511,6 @@ test('period labels and button boundaries remain readable in light and dark them
 test('missing price history leaves scores intact and shows no fabricated chart', async ({
   page,
 }) => {
-  await page.route('**/api/v1/stocks/BBCA/price-history?range=1m', (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ ...priceResponse(), series: [] }),
-    }),
-  )
   await page.route('**/api/v1/stocks/BBCA/price-history?range=3m', (r) =>
     r.fulfill({
       status: 503,
@@ -538,11 +519,6 @@ test('missing price history leaves scores intact and shows no fabricated chart',
     }),
   )
   await page.goto('/stocks/BBCA/intel-score')
-  await expect(page.getByText('Not enough price observations')).toBeVisible()
-  await expect(
-    page.getByRole('article', { name: 'Share price trend' }).getByRole('img'),
-  ).toHaveCount(0)
-  await page.getByRole('button', { name: '3M', exact: true }).click()
   await expect(page.getByText('Price history unavailable', { exact: true })).toBeVisible()
   await expect(page.getByTestId('score-combined')).toContainText(
     String(testResponse.scores.combined.value),
