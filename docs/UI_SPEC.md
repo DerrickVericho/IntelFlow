@@ -37,6 +37,10 @@ data-heavy research. Home, IntelScore, and Shareholders have usable navigation.
   does not perform a data request. OS and cross-tab changes are synchronized.
 - Desktop has a 224px sidebar; below 768px navigation moves above the content.
   Research stays inside the viewport; wide tables and charts scroll locally.
+- The IntelFlow wordmark uses the transparent bull-and-upward-arrow brand asset
+  inside a compact borderless surface. That surface is white in light mode and
+  navy in dark mode so the mark remains legible without a visible white image
+  background. The same asset is used as the browser favicon.
 
 ## Routes
 

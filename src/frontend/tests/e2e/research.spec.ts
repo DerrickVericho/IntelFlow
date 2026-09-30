@@ -233,6 +233,14 @@ test('Home and error recovery work in both themes', async ({ page }, testInfo) =
   for (const theme of ['light', 'dark']) {
     await page.goto('/')
     await page.getByRole('combobox', { name: 'Color theme' }).selectOption(theme)
+    const brandMark = page.getByTestId('brand-mark')
+    await expect(brandMark).toBeVisible()
+    await expect(brandMark.locator('img')).toHaveAttribute('src', '/intelflow-logo.png')
+    await expect(brandMark).toHaveCSS(
+      'background-color',
+      theme === 'dark' ? 'rgb(16, 35, 60)' : 'rgb(255, 255, 255)',
+    )
+    await expect(brandMark).toHaveCSS('border-top-width', '0px')
     await page.screenshot({ path: testInfo.outputPath('home-' + theme + '.png'), fullPage: true })
     await page.getByRole('textbox', { name: 'IDX symbol' }).fill('NONE')
     await page.getByRole('button', { name: 'Open IntelScore' }).click()

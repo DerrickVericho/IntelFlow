@@ -197,6 +197,19 @@
     color: #09182a !important;
     box-shadow: 0 0 0 1px rgb(255 228 154 / 18%);
   }
+  .brand-mark {
+    border: 0;
+    background-color: #ffffff;
+  }
+  .brand-mark img {
+    filter: drop-shadow(0 2px 3px rgb(20 36 61 / 18%));
+  }
+  :root[data-theme='dark'] .brand-mark {
+    background-color: #10233c;
+  }
+  :root[data-theme='dark'] .brand-mark img {
+    filter: drop-shadow(0 0 5px rgb(101 218 179 / 24%));
+  }
   button,
   input,
   select {
