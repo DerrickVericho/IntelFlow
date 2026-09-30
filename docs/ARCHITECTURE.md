@@ -73,10 +73,14 @@ applies the same bound before any paid request. The latest observed trading
 date remains separate from this requested range end.
 
 Implemented async strategy: Redis uses its async client; synchronous requests
-transport runs through `asyncio.to_thread`. One gateway lock serializes access
-to its shared requests Session and coalesces equivalent in-process misses.
-Run one application worker in this MVP. Multi-worker deployments would require
-a cross-process request lock to prevent duplicate paid misses.
+transport runs through `asyncio.to_thread`. Each worker thread owns a requests
+Session, so concurrent upstream calls do not share mutable Session state. The
+gateway checks Redis first but does not serialize cache misses: concurrent
+requests for the same uncached key may both spend a Sectors credit. A response
+cached before the later request's lookup is still reused. This favors response
+latency over miss coalescing for the current small user base; Redis remains
+required, and rate/credit limits still apply. No process-local or distributed
+request lock is currently used.
 
 ## API application
 
@@ -89,10 +93,11 @@ a cross-process request lock to prevent duplicate paid misses.
   the app factory rather than implemented directly in `main.py`.
 
 The research router is `api/routes.py`. Public schemas and domain models are
-split by product section instead of collected in a single research file.
-Orchestration remains in `services/research.py`. Routes are implemented for all
-five planned research/chart use cases. See `docs/BACKEND_READINESS.md` for
-coverage.
+split by product section. The route-compatible `ResearchService` facade inherits
+focused service classes for flow, aggregate IntelScore, price history,
+shareholders, and broker series. Shared provider/date helpers live in
+`services/base.py`. Routes are implemented for all five research/chart use
+cases. See `docs/BACKEND_READINESS.md` for coverage.
 
 Run locally with:
 
@@ -121,7 +126,13 @@ src/backend/
 │   ├── registry.py
 │   └── sectors.py
 ├── services/
-│   ├── research.py          # Coordinates complete research use cases
+│   ├── research.py          # Existing route-facing service facade
+│   ├── base.py              # Shared provider access and date helpers
+│   ├── flow.py              # Flow evidence by trading window
+│   ├── intel_score.py       # Aggregate company research and scores
+│   ├── prices.py            # OHLC and volume history
+│   ├── shareholders.py      # Monthly shareholder composition
+│   ├── brokers.py           # Ranked broker timelines
 │   └── utils.py             # Pure service-level normalization and date helpers
 ├── sectors/
 │   ├── client.py           # Raw Sectors HTTP implementation
@@ -246,13 +257,22 @@ fallback. No browser configuration includes Sectors credentials or provider URLs
 Query keys include symbol and, for evidence, the window. One initial aggregate
 request supplies scores, fundamentals and 20D evidence. The 1D/5D controls fetch
 only the flow endpoint; returning to 20D reuses the aggregate. A separate
-`price-history` query key contains symbol and 1M/3M range. It consumes the existing
-price endpoint without changing score state. Unsupported 1Y sends no request. Query cancellation
-passes AbortSignal to fetch; data is not carried over between query keys.
+`price-history` query key contains the symbol and fixed 3M range and feeds the
+Change over time candlestick chart without changing score state. The browser
+does not request `broker-series` for this chart. Query cancellation passes
+AbortSignal to fetch; data is not carried over between query keys.
 Browser query cache freshness (five minutes) is independent of backend source
 staleness. Retry, focus refetch and reconnect refetch are disabled to avoid
 implicit repeat requests. Missing values remain null. The frontend presentation layer maps existing scores
 to documented bands and coverage categories without altering score arithmetic.
+
+The page PDF builder is lazy-loaded when Save as PDF is clicked. It captures
+the dedicated IntelScore content wrapper, excluding the application shell and
+export button, as a high-resolution image and tiles it across A4 PDF pages.
+Desktop-width captures use landscape orientation while narrow captures use
+portrait. The current theme, charts, tables, and evidence window are preserved
+visually; text is rasterized. PDF generation is local to the browser and adds
+no Sectors or backend request.
 
 The running frontend has no synthetic data mode. Unit and browser tests isolate
 the HTTP contract with test-only response data; the normal Compose stack uses
@@ -312,7 +332,7 @@ src/frontend/
 | Select requested range | Yes | Sends the requested range |
 | Calculate score or evidence | Yes | No |
 | Choose chart type/colors/layout | No | Yes |
-| Tooltip and range-tab interaction | No | Yes |
+| Tooltip and chart interaction | No | Yes |
 | Format IDR, percentages, and labels | Returns raw value/unit | Yes |
 
 ## Data and cache strategy
@@ -398,6 +418,10 @@ basic analysis flow works.
   log volume is mounted.
 - Exception logging includes type and stack locations only, avoiding exception
   values and source-code lines that could reveal credentials or raw payloads.
+- Metrics, traces, dashboards, and alerting are future improvements. The first
+  useful measurements are route latency, cache outcomes,
+  Sectors call count/credit use, upstream failures, and source freshness. The
+  existing request and cache logs are the current operational baseline.
 
 ## Deployment
 

@@ -76,6 +76,7 @@ receiving a buy/sell recommendation.
   IntelScore for the supported analysis windows.
 - Fundamental evidence covering the shallow cross-sector metrics defined in
   `SCORING.md`.
+- Downloadable visual PDF copy of the currently displayed IntelScore page.
 - Non-advisory disclaimer.
 - Cache/API-credit controls.
 
@@ -94,7 +95,9 @@ receiving a buy/sell recommendation.
 - Revenue-segment visualization.
 - User-selected peer comparison.
 - User-adjustable Flow/Fundamental combined-score weights.
-- Historical score snapshots and exportable research brief.
+- Historical score snapshots.
+- Operational observability for request latency, cache outcomes, Sectors call
+  volume/credits, failures, and data freshness.
 - AI summary of Sectors evidence.
 - Recent company news and on-demand internet research with citations.
 
@@ -158,7 +161,6 @@ IntelScore workflow.
 
 ## Open questions
 
-- Which initial observation windows and score thresholds are most useful?
 - Which minimum fundamental metrics are consistently available for demo
   tickers across sectors?
 - Which tickers will be used as validation and demo cases?
@@ -186,11 +188,27 @@ can be assessed. Use explicit status bands and categorical data confidence with
 rules documented in SCORING.md. These are research interpretations, not automated
 trade recommendations. Keep the existing score formulas and API data unchanged.
 
-Show compact 1M/3M price trends using the existing price-history endpoint, with
-actual coverage. Current foreign flow is limited to the aggregate observations.
-Historical score snapshots and 1Y history are not in the contract: show unavailable
-states, never inferred improvements or invented charts. A future history feature
-would need a separately approved API/data change.
+Show fixed 3M price history using the existing price-history endpoint, with
+actual coverage. Current foreign flow remains in Flow Activity.
+Historical score snapshots and 1Y history are not in the contract; score
+direction remains unavailable. A future history feature needs a separately
+approved API/data change.
+
+## Change-over-time chart refinement (2026-09-29)
+
+The IntelScore Change over time section uses one large, fixed 3M price
+candlestick chart supplied by `/price-history?range=3m`. It does not duplicate
+foreign flow already shown in Flow Activity and does not request broker-series
+overlays. The empty Overall Score history panel and unsupported range controls
+are absent. Missing OHLC observations remain gaps; score calculations are not
+changed.
+
+Top-buyer/seller overlays and longer foreign-flow timelines are future
+improvements. Without a dedicated historical database they require additional
+paid provider calls and careful date alignment. Broker daily activity accepts
+only a 14-calendar-day window per request, while top-broker selection and daily
+series retrieval have different response shapes. Foreign history also needs a
+range contract aligned with price dates before it returns to this section.
 
 ## Investor broker view refinement (2026-09-27)
 
@@ -201,3 +219,17 @@ brokers already returned in the all-investor ranking, so they are explicitly
 scoped to that list. Flow Score and Top 3/5/10 balance remain all-investor
 measures. The redundant broker trading-values table and prior-average/baseline
 count columns in Daily volume are removed.
+
+## Research PDF export and future observability (2026-09-30)
+
+The IntelScore page offers Save as PDF after its research response loads. The
+download is a visual copy of the current IntelScore content, including the
+selected theme, evidence window, charts, tables, dates, and coverage states as
+displayed. The export button itself is omitted. The browser captures the page
+and splits the image across A4 sheets; this preserves appearance but the PDF
+text is not selectable. Export makes no additional backend or Sectors request.
+
+Operational observability beyond the current structured logs is deferred.
+Future work should measure route and upstream latency, cache hit/miss rates,
+paid call and credit volume, error rates, and source freshness without
+logging credentials or full provider payloads.

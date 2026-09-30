@@ -45,8 +45,17 @@ backend repeats validation before provider work.
   no score arithmetic.
 - The initial aggregate request supplies scores, fundamentals and 20D flow
   evidence. The 1D/5D controls request only flow evidence; returning to 20D
-  reuses the aggregate response. A separate price-history query loads 1M closes;
-  the trend control can request 3M closes through the existing endpoint.
+  reuses the aggregate response. A separate fixed-3M price-history query loads
+  the Change over time candlestick chart. It does not request broker history or
+  duplicate the foreign-flow evidence already shown in Flow Activity.
+- Save as PDF is available after research loads. A lazy-loaded browser builder
+  captures the dedicated IntelScore content region and current theme to an
+  image-based A4 PDF, omitting the app shell and export button. Desktop-width
+  captures use landscape orientation; narrow captures use portrait. Charts,
+  partial/stale states, and selected evidence remain as shown. Export makes no
+  additional provider or backend request; the PDF text is not selectable.
+  Internally scrollable tables retain their visible scroll positions rather
+  than expanding every row.
 - Flow and annual fundamental charts use normalized backend arrays. Missing
   values stay null. Quarterly snapshots without a confirmed period are not
   given an invented history.
@@ -89,8 +98,9 @@ sellers by provider rank above/below zero; paired tables and full trading values
 are directly visible. Overall Score sits left of the stacked Flow and Fundamental
 Scores. Component values, status meters, weights and definitions are always visible.
 Display bands, drivers, risks and coverage confidence are defined in SCORING.md.
-No historical scores or 1Y histories are fabricated; unsupported views explain
-what is missing. Ticker search remains in the top navigation. Fundamental history
+Historical scores and 1Y histories are not displayed; the unsupported 1Y
+control and empty score-history panel were removed. Ticker search remains in the
+top navigation. Fundamental history
 uses year-column tables. Disclosures, internal labels and source links are removed.
 Partial states describe affected sections; full-page errors retain global ticker entry.
 All product copy and implementation documentation are English.
@@ -120,10 +130,9 @@ Tests do not claim that
 the test response is current BBCA market data. Backend unit tests likewise use
 test doubles and reviewed local provider samples.
 
-The lazy-loaded research/chart bundle currently exceeds Vite's 500 kB advisory
-(about 592 kB minified / 199 kB gzip). Home loads separately. Live provider
-coverage and score calibration remain to be verified with authorized API calls.
-
+The lazy-loaded chart bundle currently exceeds Vite's 500 kB advisory
+(about 563 kB minified / 192 kB gzip). Home loads separately. Live provider
+coverage remains to be verified with authorized API calls.
 
 ## Tailwind maintenance
 

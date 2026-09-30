@@ -1,8 +1,8 @@
 # Backend readiness for frontend integration
 
 Status: implemented draft backend. The comprehensive IntelScore screen has an
-endpoint and typed data for every agreed MVP block. This does not certify the
-scoring hypothesis or real-time provider coverage for every IDX ticker.
+endpoint and typed data for every agreed MVP block. Provider coverage for each
+IDX ticker still depends on available dated inputs.
 
 ## Field-level frontend audit
 
@@ -20,12 +20,13 @@ scoring hypothesis or real-time provider coverage for every IDX ticker.
 | Research key points | `key_points[]`, source references | Ready; deterministic synthesis, no LLM requirement |
 | Source freshness / missing states | `sources[]`, `missing_inputs[]`, `status` | Ready; cache fetch time separated from observation date |
 | Monthly shareholder stacked bars | `/shareholders` categories/holdings/totals/counts | Backend ready, optional frontend work |
-| Price/volume chart | `/price-history` OHLC and volume series | Backend ready, optional frontend work |
-| Default top 3 buyers/sellers and broker selector | `/broker-series` defaults, available/selected codes, series | Backend ready; cached 14-day chunks reused across selections |
+| Price/volume chart | `/price-history` OHLC and volume series | Fixed 3M OHLC consumed by the IntelScore Change over time chart; standalone Stockchart remains optional |
+| Default top 3 buyers/sellers and broker selector | `/broker-series` defaults, available/selected codes, series | Backend ready but not requested by the current IntelScore chart; future overlays must account for paid calls and 14-day provider chunks |
 
-The initial IntelScore screen needs one HTTP request. Flow tab changes request
-only `/flow`; quarterly/annual report sections remain cached independently.
-Broker selection does not re-fetch prices or cached all-broker history.
+The initial IntelScore screen requests the aggregate research response and the
+fixed 3M price history. Flow tab changes request only `/flow`; quarterly/annual
+report sections remain cached independently. Broker-series remains available
+for a future standalone chart or overlay but is not fetched by this screen.
 
 ## Reviewable artifacts
 
@@ -39,7 +40,7 @@ Broker selection does not re-fetch prices or cached all-broker history.
 ## Verification and limitations
 
 Automated tests cover provider parsing, normalized response shapes, cache hits,
-raw-field retention, corrupted entries, request coalescing, separate parameters,
+raw-field retention, corrupted entries, concurrent misses, separate parameters,
 nullable/insufficient data, meaningful valuation denominators, source gaps,
 invalid queries, upstream errors, console log modes and exception redaction.
 An opt-in real Redis test verifies cache survival across gateway recreation.
@@ -68,21 +69,21 @@ Remaining work before a production/demo claim:
    counts or changes null. This does not validate other symbols or full score
    coverage. Offline fixtures do not prove current provider availability,
    account permissions, or credits for the remaining endpoints.
-2. Calibrate `draft-v0.7` against representative liquid/illiquid tickers and
-   sectors. Numeric scoring is implemented but remains a research hypothesis.
-3. Annual financial history cannot generate a quarterly history chart. The
+2. Annual financial history cannot generate a quarterly history chart. The
    latest quarterly YoY values have no confirmed quarter label in the schema.
-4. A recent IPO, suspension, short history, or missing broker/foreign observations
+3. A recent IPO, suspension, short history, or missing broker/foreign observations
    can leave scores null. Charts show available evidence and missing reasons.
-5. Financial statement publication dates and same-period valuation denominators
+4. Financial statement publication dates and same-period valuation denominators
    are not fully supplied. Period and retrieval timestamps are preserved;
    historical statements must not be presented as live financial results.
-6. Deployment uses a single worker. The miss lock is process-local; multiple
-   workers/replicas require distributed coordination to avoid duplicate paid
-   requests. The current cache policy does not serve expired Redis entries.
-7. Market staleness uses a seven-calendar-day heuristic, and price interval
+5. Redis is checked before each paid request, but concurrent misses for the
+   same key are intentionally not coalesced. They can spend duplicate credits
+   even in one worker; additional workers/replicas increase that chance. This
+   is the current latency-over-credit tradeoff, not a guarantee of one call per
+   key. Expired Redis entries are not served.
+6. Market staleness uses a seven-calendar-day heuristic, and price interval
    coverage is approximate without an authoritative IDX trading calendar.
-8. Shareholder totals can cover less than issued shares. The frontend must show
+7. Shareholder totals can cover less than issued shares. The frontend must show
    the coverage instead of silently turning the categories into 100% ownership.
 
 AI/news, peer-comparison pages, revenue-segment analysis and frontend rendering

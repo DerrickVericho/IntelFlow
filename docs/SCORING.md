@@ -2,13 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Status | Implemented draft hypothesis; calibration pending |
+| Status | Implemented formula |
 | Version | draft-v0.7 |
-| Last updated | 2026-09-27 |
+| Last updated | 2026-09-29 |
 
-This document defines the scoring model separately from the product PRD. The
-weights and thresholds are provisional and must be validated against sample
-ticker data before being frozen for the demo.
+This document defines the formula, weights, thresholds, and missing-data rules
+used by the current scoring version.
 
 ## Principles
 
@@ -85,7 +84,7 @@ remain visible, and label the resulting combined score as customized.
 
 ## Research-state matrix
 
-Use 60 as the initial high/low boundary. This threshold is provisional.
+The current high/low boundary is 60.
 
 | | Fundamental >= 60 | Fundamental < 60 |
 |---|---|---|
@@ -93,14 +92,6 @@ Use 60 as the initial high/low boundary. This threshold is provisional.
 | Flow < 60 | Fundamentally supported, flow unconfirmed | Weak or inconclusive setup |
 
 The state is explanatory. It never replaces numeric scores.
-
-## Validation plan
-
-1. Select several liquid and less-liquid stocks with different flow profiles.
-2. Calculate raw features before finalizing normalization.
-3. Check whether the scores match inspectable underlying evidence.
-4. Test stale data, missing segments, and bank/non-bank behavior.
-5. Version formula changes and lock a version before final demo recording.
 
 ## Implemented normalization — draft-v0.7
 
@@ -211,14 +202,13 @@ the formula, so the calculation version advances from `draft-v0.3` to
 zero remains a valid score when all available observations score zero; it is not
 an unavailable state.
 
-### Limits to validate before demo
+### Interpretation limits
 
-These normalizations are transparent first-pass hypotheses, not calibrated
-predictors. More trading activity can accompany distribution, and positive
-cash flow has different significance across sectors. A positive annual
-denominator is a conservative check, not verification of the exact provider
-valuation denominator (which may use a trailing period). Compare representative
-tickers before declaring the scoring version final. No confidence score is added.
+More trading activity can accompany distribution, and positive cash flow has
+different significance across sectors. A positive annual denominator does not
+verify the provider's exact valuation denominator, which may use a trailing
+period. The score is research context, not a prediction. No confidence score
+is added.
 
 
 ## Display interpretation and data confidence (2026-09-27)
