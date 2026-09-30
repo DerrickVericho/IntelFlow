@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { PDFDocument } from 'pdf-lib'
 import { priceResponse } from '../fixtures'
 
 const testResponse = JSON.parse(
@@ -243,6 +244,28 @@ test('Home and error recovery work in both themes', async ({ page }, testInfo) =
   }
 })
 
+test('IntelScore entry action remains visible in both themes', async ({ page }, testInfo) => {
+  await page.goto('/intel-score')
+  const action = page.getByRole('button', { name: 'Open IntelScore' })
+  for (const theme of ['light', 'dark']) {
+    await page.getByRole('combobox', { name: 'Color theme' }).selectOption(theme)
+    await expect(action).toBeVisible()
+    await expect(action).toHaveCSS(
+      'background-color',
+      theme === 'dark' ? 'rgb(244, 201, 93)' : 'rgb(36, 89, 181)',
+    )
+    await expect(action).toHaveCSS(
+      'color',
+      theme === 'dark' ? 'rgb(9, 24, 42)' : 'rgb(255, 255, 255)',
+    )
+    await expect(action).toHaveCSS(
+      'border-color',
+      theme === 'dark' ? 'rgb(255, 228, 154)' : 'rgb(15, 63, 145)',
+    )
+    await page.screenshot({ path: testInfo.outputPath(`intel-score-entry-${theme}.png`) })
+  }
+})
+
 test('partial and stale evidence stays understandable in both themes', async ({
   page,
 }, testInfo) => {
@@ -339,6 +362,84 @@ test('change over time shows only a fixed three-month candlestick chart', async 
   await expect(page.getByTestId('score-combined')).toContainText(
     String(testResponse.scores.combined.value),
   )
+})
+
+test('PDF downloads the displayed IntelScore page without another API request', async ({
+  page,
+}, testInfo) => {
+  const calls: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/v1/')) calls.push(request.url())
+  })
+  await page.goto('/stocks/BBCA/intel-score')
+  await expect(
+    page.getByRole('img', { name: /^Three-month share price candlesticks/ }),
+  ).toBeVisible()
+  const before = calls.length
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Save as PDF' }).click(),
+  ])
+  expect(download.suggestedFilename()).toBe(`IntelFlow_BBCA_IntelScore_${testResponse.as_of}.pdf`)
+  const path = testInfo.outputPath('research-complete.pdf')
+  await download.saveAs(path)
+  const bytes = readFileSync(path)
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-')
+  const pdf = await PDFDocument.load(bytes)
+  expect(pdf.getPageCount()).toBeGreaterThan(1)
+  const size = pdf.getPage(0).getSize()
+  expect(size.width).toBeGreaterThan(size.height)
+  expect(calls).toHaveLength(before)
+})
+
+test('PDF remains downloadable with partial evidence and missing price history', async ({
+  page,
+}, testInfo) => {
+  const partial = structuredClone(testResponse)
+  partial.status = 'partial'
+  partial.scores.flow.value = null
+  partial.scores.flow.reason = 'Foreign flow covers only 15 dates.'
+  partial.scores.combined.value = null
+  partial.scores.combined.reason = 'Flow score unavailable'
+  partial.missing_inputs = [{ key: 'foreign_flow', reason: partial.scores.flow.reason }]
+  await page.route('**/api/v1/stocks/BBCA/intel-score', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(partial) }),
+  )
+  await page.route('**/api/v1/stocks/BBCA/price-history?range=3m', (route) =>
+    route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }),
+  )
+  const calls: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/v1/')) calls.push(request.url())
+  })
+  await page.goto('/stocks/BBCA/intel-score')
+  await expect(page.getByText('Price history unavailable', { exact: true })).toBeVisible()
+  const before = calls.length
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Save as PDF' }).click(),
+  ])
+  const path = testInfo.outputPath('research-partial.pdf')
+  await download.saveAs(path)
+  expect(readFileSync(path).subarray(0, 5).toString()).toBe('%PDF-')
+  expect(calls).toHaveLength(before)
+})
+
+test('PDF captures the selected dark theme and flow window', async ({ page }, testInfo) => {
+  await page.goto('/stocks/BBCA/intel-score')
+  await page.getByRole('combobox', { name: 'Color theme' }).selectOption('dark')
+  const flow = page.getByRole('region', { name: 'Flow activity' })
+  await flow.getByRole('button', { name: '5D', exact: true }).click()
+  await expect(flow.getByText('5 observed trading days')).toBeVisible()
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Save as PDF' }).click(),
+  ])
+  const path = testInfo.outputPath('research-dark-5d.pdf')
+  await download.saveAs(path)
+  const bytes = readFileSync(path)
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-')
+  expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(1)
 })
 
 test('score text has readable contrast and labels in both themes', async ({ page }, testInfo) => {

@@ -57,10 +57,6 @@ class CachedSectorsGateway:
         self.settings = settings
         self.utc_today = utc_today or (lambda: datetime.now(UTC).date())
 
-        # The requests Session is synchronous and shared. This lock also merges
-        # equivalent cache misses while the MVP runs as one application worker.
-        self.lock = asyncio.Lock()
-
     async def _get(
         self,
         operation: Operation,
@@ -87,56 +83,55 @@ class CachedSectorsGateway:
             params,
         )
 
-        async with self.lock:
-            cached = await self.store.get(key)
-            if cached is not None:
-                try:
-                    result = restore_cached(
-                        cached,
-                        adapter,
-                        operation,
-                        symbol,
-                        params,
-                    )
-                except (KeyError, TypeError, ValueError, SectorsResponseError):
-                    logger.warning(
-                        "Invalid cache entry",
-                        extra={
-                            "operation": operation,
-                            "cache_outcome": "invalid",
-                        },
-                    )
-                else:
-                    logger.info(
-                        "Sectors cache",
-                        extra={
-                            "operation": operation,
-                            "cache_outcome": "hit",
-                        },
-                    )
-                    return result
+        cached = await self.store.get(key)
+        if cached is not None:
+            try:
+                result = restore_cached(
+                    cached,
+                    adapter,
+                    operation,
+                    symbol,
+                    params,
+                )
+            except (KeyError, TypeError, ValueError, SectorsResponseError):
+                logger.warning(
+                    "Invalid cache entry",
+                    extra={
+                        "operation": operation,
+                        "cache_outcome": "invalid",
+                    },
+                )
+            else:
+                logger.info(
+                    "Sectors cache",
+                    extra={
+                        "operation": operation,
+                        "cache_outcome": "hit",
+                    },
+                )
+                return result
 
-            args = (symbol,) if symbol else ()
-            raw = await asyncio.to_thread(fetch, *args, **params)
-            data = validate_payload(raw, adapter, operation, symbol, params)
-            fetched_at = datetime.now(UTC)
-            entry = serialize_cached(raw, fetched_at)
+        args = (symbol,) if symbol else ()
+        raw = await asyncio.to_thread(fetch, *args, **params)
+        data = validate_payload(raw, adapter, operation, symbol, params)
+        fetched_at = datetime.now(UTC)
+        entry = serialize_cached(raw, fetched_at)
 
-            await self.store.set(
-                key,
-                entry,
-                ttl_for(self.settings, operation, params, fetched_at.date()),
-            )
+        await self.store.set(
+            key,
+            entry,
+            ttl_for(self.settings, operation, params, fetched_at.date()),
+        )
 
-            logger.info(
-                "Sectors cache",
-                extra={
-                    "operation": operation,
-                    "cache_outcome": "miss",
-                },
-            )
+        logger.info(
+            "Sectors cache",
+            extra={
+                "operation": operation,
+                "cache_outcome": "miss",
+            },
+        )
 
-            return Retrieved(data=data, fetched_at=fetched_at)
+        return Retrieved(data=data, fetched_at=fetched_at)
 
     async def get_daily(
         self,

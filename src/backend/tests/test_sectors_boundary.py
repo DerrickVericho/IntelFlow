@@ -2,12 +2,16 @@
 
 import asyncio
 import json
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+from threading import Barrier
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 import requests
 
+from src.backend.cache.store import MemoryCache
 from src.backend.exceptions.cache import CacheUnavailable
 from src.backend.exceptions.sectors import (
     SectorsAuthenticationError,
@@ -18,9 +22,10 @@ from src.backend.exceptions.sectors import (
     SectorsValidationError,
 )
 from src.backend.sectors.client import SectorsClient
+from src.backend.sectors.cached import CachedSectorsGateway
 from src.backend.sectors.adapters import ADAPTERS
-from src.backend.tests.conftest import Harness
-from src.backend.tests.fixtures import FixtureTransport
+from src.backend.tests.conftest import Harness, make_settings
+from src.backend.tests.fixtures import FixtureTransport, TODAY
 
 
 def test_client_sends_documented_daily_request() -> None:
@@ -221,6 +226,36 @@ def test_client_rejects_invalid_symbol_before_request() -> None:
     session.get.assert_not_called()
 
 
+def test_client_uses_separate_sessions_for_concurrent_worker_threads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    barrier = Barrier(2)
+    sessions: list[Mock] = []
+
+    def make_session() -> Mock:
+        session = Mock()
+        session.headers = {}
+        session.get.return_value.status_code = 200
+        session.get.return_value.json.return_value = [{"symbol": "BBCA.JK"}]
+        session.get.side_effect = lambda *args, **kwargs: (
+            barrier.wait(timeout=3),
+            session.get.return_value,
+        )[1]
+        sessions.append(session)
+        return session
+
+    monkeypatch.setattr(requests, "Session", make_session)
+    client = SectorsClient("test-key")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(client.get_daily, ("BBCA", "BBCA")))
+
+    assert results == [[{"symbol": "BBCA.JK"}]] * 2
+    assert len(sessions) == 2
+    client.close()
+    for session in sessions:
+        session.close.assert_called_once()
+
+
 def test_gateway_keeps_raw_unknown_fields_but_exposes_typed_data(
     harness: Harness,
 ) -> None:
@@ -232,6 +267,34 @@ def test_gateway_keeps_raw_unknown_fields_but_exposes_typed_data(
     second = asyncio.run(harness.gateway.get_daily("test.jk"))
     assert second.data == first.data
     assert harness.transport.calls["get_daily"] == 1
+
+
+def test_concurrent_same_key_misses_do_not_wait_for_each_other() -> None:
+    rows = FixtureTransport().rows
+    barrier = Barrier(2)
+
+    class ParallelTransport:
+        calls = 0
+
+        def get_daily(self, _symbol: str, **_params: Any) -> list[dict[str, Any]]:
+            barrier.wait(timeout=3)
+            self.calls += 1
+            return deepcopy(rows)
+
+    transport = ParallelTransport()
+    gateway = CachedSectorsGateway(
+        transport, MemoryCache(), make_settings(), utc_today=lambda: TODAY
+    )
+
+    async def run() -> None:
+        first, second = await asyncio.gather(
+            gateway.get_daily("TEST"), gateway.get_daily("TEST")
+        )
+        assert first.data == second.data
+        await gateway.get_daily("TEST")
+
+    asyncio.run(run())
+    assert transport.calls == 2
 
 
 @pytest.mark.parametrize(

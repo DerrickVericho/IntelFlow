@@ -114,6 +114,11 @@ current visible scroll positions; export does not silently expand hidden rows.
 
 ## Score hierarchy
 
+Primary submit actions use an explicit high-contrast treatment independent of
+native browser button styling. Light mode uses a saturated blue surface with
+white text; dark mode uses a warm yellow surface with near-black text and a
+lighter border so the action remains visually distinct from dark cards.
+
 - Overall Score is the user-facing name for the backend Combined Score. Its
   card is prominent on the left, spanning both right-hand rows at 1280px and wider.
 - Flow Score is top-right; Fundamental Score is bottom-right. All three align

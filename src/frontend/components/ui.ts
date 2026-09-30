@@ -3,7 +3,7 @@ export const ui = {
   muted: 'text-sm text-muted',
   eyebrow: 'mb-2 block text-sm font-medium text-muted',
   primary:
-    'inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-accent bg-accent px-5 py-3 text-sm font-semibold text-on-accent transition-[filter] hover:brightness-110',
+    'primary-action inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-5 py-3 text-sm font-semibold transition-[filter] hover:brightness-110',
   secondary:
     'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-raised px-5 py-3 text-sm font-semibold text-ink hover:border-accent',
   panel: 'min-w-0 rounded-2xl border border-line bg-surface p-5 sm:p-7',
