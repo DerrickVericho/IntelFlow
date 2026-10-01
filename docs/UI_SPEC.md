@@ -37,6 +37,10 @@ data-heavy research. Home, IntelScore, and Shareholders have usable navigation.
   does not perform a data request. OS and cross-tab changes are synchronized.
 - Desktop has a 224px sidebar; below 768px navigation moves above the content.
   Research stays inside the viewport; wide tables and charts scroll locally.
+- The IntelFlow wordmark uses the transparent bull-and-upward-arrow brand asset
+  inside a compact borderless surface. That surface is white in light mode and
+  navy in dark mode so the mark remains legible without a visible white image
+  background. The same asset is used as the browser favicon.
 
 ## Routes
 
@@ -97,7 +101,27 @@ from the aggregate backend response; no new provider request or score calculatio
 is introduced. The average excludes the latest observation. Missing values
 remain Unavailable, missing change says Change unavailable, and zero stays zero.
 
+### PDF export
+
+A labeled `Save as PDF` action sits immediately above the company market
+summary, aligned right on wide screens and full width on narrow screens. It
+appears after the research response is available. While the file is prepared,
+the button shows progress and prevents duplicate clicks; a failure shows an
+inline retryable error. The downloaded A4 PDF reproduces the dedicated
+IntelScore content region visually, including its theme, charts, tables,
+selected evidence window, source attribution, and coverage states. The app
+shell and export action are excluded. Wide desktop captures use A4 landscape to
+preserve the dashboard proportions; narrow captures use A4 portrait.
+Text is rasterized rather than selectable. Export uses the rendered page and
+does not start a paid provider request. Scrollable tables are captured at their
+current visible scroll positions; export does not silently expand hidden rows.
+
 ## Score hierarchy
+
+Primary submit actions use an explicit high-contrast treatment independent of
+native browser button styling. Light mode uses a saturated blue surface with
+white text; dark mode uses a warm yellow surface with near-black text and a
+lighter border so the action remains visually distinct from dark cards.
 
 - Overall Score is the user-facing name for the backend Combined Score. Its
   card is prominent on the left, spanning both right-hand rows at 1280px and wider.
@@ -135,19 +159,19 @@ is explicitly unavailable when historical snapshots are absent. The Overall
 Score card does not show empty prior-week or prior-month comparison rows, and
 historical scores must not be inferred from price changes.
 
-A separate Change over time section has keyboard-accessible 1M/3M/1Y controls.
-Its selected controls use explicit accent foreground and background colors in
-both themes so their labels remain readable during pointer and keyboard use.
-The default 1M price query and on-demand 3M query use the existing backend
-price-history endpoint. Prices preserve exact dated closes and incomplete/stale
-coverage flags. No request is sent for unsupported 1Y. Failures or fewer than
-two observations show informative empty states without removing aggregate scores.
+A separate Change over time section fetches a fixed 3M dated OHLC series from
+`price-history`. One full-width candlestick chart uses an IDR price axis and
+shows its actual coverage dates. There are no range controls, broker overlays,
+foreign-flow chart, or empty Overall Score history panel in this section.
+Fewer than two price observations, unavailable history, or unavailable OHLC
+yield explicit empty states without removing aggregate scores. Missing OHLC
+observations remain gaps. Historical scores are not inferred from price history.
 
-The 1M foreign-flow chart uses only available aggregate observations within the
-last 30 calendar days ending at the flow's effective end. Missing dates in the
-observed price calendar remain gaps. The subset and dates are explicit. 3M/1Y
-foreign flow and Overall Score history are unavailable in the current contract;
-they show no chart. Range changes never calculate scores or fetch a new aggregate.
+Broker overlays and longer foreign-flow timelines are deferred until historical
+storage or a similarly reliable range-aligned retrieval strategy exists. The
+current provider broker activity window is limited to 14 calendar days per
+request, and foreign observations do not yet share the standalone price-history
+range contract. Foreign evidence remains available in Flow Activity.
 
 ## Key points and flow
 

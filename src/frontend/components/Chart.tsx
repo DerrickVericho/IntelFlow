@@ -1,6 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { init, use as registerECharts, type ComposeOption } from 'echarts/core'
-import { BarChart, LineChart, type BarSeriesOption, type LineSeriesOption } from 'echarts/charts'
+import {
+  BarChart,
+  CandlestickChart,
+  LineChart,
+  type BarSeriesOption,
+  type CandlestickSeriesOption,
+  type LineSeriesOption,
+} from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
@@ -16,6 +23,7 @@ import { useTheme } from '../app/theme'
 
 registerECharts([
   BarChart,
+  CandlestickChart,
   LineChart,
   GridComponent,
   TooltipComponent,
@@ -25,6 +33,7 @@ registerECharts([
 ])
 export type ChartOption = ComposeOption<
   | BarSeriesOption
+  | CandlestickSeriesOption
   | LineSeriesOption
   | GridComponentOption
   | TooltipComponentOption
@@ -38,6 +47,7 @@ export function useChartTheme() {
     teal: token('--teal'),
     red: token('--red'),
     blue: token('--blue'),
+    amber: token('--amber'),
     text: token('--chart-label'),
     grid: token('--border-soft'),
   }

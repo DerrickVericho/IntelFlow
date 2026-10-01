@@ -55,8 +55,7 @@ Missing values are null, not zero. Percent uses percentage points (12.4 = 12.4%)
 | `fundamentals` | Four metric groups described below |
 
 Scores use `draft-v0.7`, with exact rules in `docs/SCORING.md`. They are
-research hypotheses awaiting calibration. Scores are calculated on the fixed
-20-observation flow window; changing a flow tab changes evidence only.
+calculated on the fixed 20-observation flow window; changing a flow tab changes evidence only.
 `input_periods` identifies flow start/end, financial year, and valuation year.
 
 Company changes compare the latest close with the immediately preceding observed

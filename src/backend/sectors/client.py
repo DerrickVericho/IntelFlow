@@ -6,6 +6,8 @@ import logging
 import os
 import re
 from collections.abc import Mapping, Sequence
+from queue import Empty, SimpleQueue
+from threading import local
 from typing import Any
 
 import requests
@@ -49,18 +51,38 @@ class SectorsClient:
 
         self.base_url = f"{base_url.rstrip('/')}/"
         self.timeout = timeout
-        self.session = session or requests.Session()
-        self.session.headers.update(
-            {
-                "Authorization": resolved_api_key,
-                "Accept": "application/json",
-            }
-        )
+        self._headers = {
+            "Authorization": resolved_api_key,
+            "Accept": "application/json",
+        }
+        self.session = session
+        self._thread_session = local()
+        self._owned_sessions: SimpleQueue[requests.Session] = SimpleQueue()
+        if session is not None:
+            session.headers.update(self._headers)
+
+    def _session_for_current_thread(self) -> requests.Session:
+        if self.session is not None:
+            return self.session
+
+        session = getattr(self._thread_session, "session", None)
+        if session is None:
+            session = requests.Session()
+            session.headers.update(self._headers)
+            self._thread_session.session = session
+            self._owned_sessions.put(session)
+        return session
 
     def close(self) -> None:
         """Close the underlying HTTP session."""
 
-        self.session.close()
+        if self.session is not None:
+            self.session.close()
+        while True:
+            try:
+                self._owned_sessions.get_nowait().close()
+            except Empty:
+                break
 
     def __enter__(self) -> SectorsClient:
         return self
@@ -206,7 +228,7 @@ class SectorsClient:
         )
 
         try:
-            response = self.session.get(
+            response = self._session_for_current_thread().get(
                 url,
                 params=clean_params,
                 timeout=self.timeout,

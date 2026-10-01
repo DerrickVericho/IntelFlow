@@ -81,8 +81,17 @@ function Shell() {
           to="/"
           className="flex items-center gap-2 text-xl sm:text-2xl font-semibold tracking-tight text-ink hover:no-underline md:mb-12"
         >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-accent text-on-accent">
-            <Icon name="flow" size={25} />
+          <span
+            className="brand-mark flex h-11 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl p-1"
+            data-testid="brand-mark"
+          >
+            <img
+              src="/intelflow-logo.png"
+              alt=""
+              width="640"
+              height="349"
+              className="block h-full w-full object-contain"
+            />
           </span>
           IntelFlow
         </NavLink>

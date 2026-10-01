@@ -1,12 +1,10 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { Research } from '../../types/research'
+import type { PriceResponse, Research } from '../../types/research'
 import { getPriceHistory } from '../../api/client'
 import { Chart, useChartTheme, type ChartOption } from '../../components/Chart'
-import { compact, date, number } from '../../utils/format'
+import { date, number } from '../../utils/format'
 import { ui } from '../../components/ui'
 
-type Range = '1m' | '3m' | '1y'
 function EmptyTrend({ title, message }: { title: string; message: string }) {
   return (
     <div className="flex min-h-40 flex-col justify-center rounded-xl border border-dashed border-control bg-canvas p-5">
@@ -16,215 +14,147 @@ function EmptyTrend({ title, message }: { title: string; message: string }) {
   )
 }
 
-function MiniTrend({
-  points,
-  name,
-  unit,
-  color,
-}: {
-  points: { date: string; value: number | null }[]
-  name: string
-  unit: string
-  color: string
-}) {
+function candle(point: PriceResponse['series'][number]): number[] | null {
+  const { open, close, low, high } = point
+  if (
+    open === null ||
+    low === null ||
+    high === null ||
+    open <= 0 ||
+    close <= 0 ||
+    low > Math.min(open, close) ||
+    high < Math.max(open, close)
+  )
+    return null
+  return [open, close, low, high]
+}
+
+function PriceChart({ price }: { price: PriceResponse }) {
   const { chartBase, chartColors } = useChartTheme()
+  const dates = price.series.map((point) => point.date)
+  const candles = price.series.map(candle)
   const option: ChartOption = {
     ...chartBase,
-    grid: { top: 15, right: 16, bottom: 40, left: 65 },
+    grid: { top: 22, right: 24, bottom: 48, left: 69 },
     tooltip: {
       ...chartBase.tooltip,
-      valueFormatter: (value) => `${number(Number(value))} ${unit}`,
+      trigger: 'axis',
+      axisPointer: { type: 'cross' },
+      valueFormatter: (value) =>
+        Array.isArray(value)
+          ? `O ${number(Number(value[0]), 0)} · C ${number(Number(value[1]), 0)} · L ${number(Number(value[2]), 0)} · H ${number(Number(value[3]), 0)} IDR`
+          : `${number(Number(value), 0)} IDR`,
     },
     xAxis: {
       type: 'category',
-      data: points.map((point) => point.date),
+      data: dates,
+      boundaryGap: true,
       axisLabel: {
         color: chartColors.text,
-        fontSize: 13,
+        fontSize: 12,
         formatter: (value) => date(value).replace(/ \d{4}$/, ''),
       },
       axisLine: { lineStyle: { color: chartColors.grid } },
     },
     yAxis: {
       type: 'value',
+      name: 'Price · IDR',
+      nameTextStyle: { color: chartColors.text },
       scale: true,
-      axisLabel: {
-        color: chartColors.text,
-        fontSize: 13,
-        formatter: (value) => (name === 'Share price' ? number(value, 0) : compact(value)),
-      },
+      axisLabel: { color: chartColors.text, formatter: (value: number) => number(value, 0) },
       splitLine: { lineStyle: { color: chartColors.grid } },
     },
     series: [
       {
-        type: 'line',
-        name,
-        data: points.map((point) => point.value),
-        connectNulls: false,
-        showSymbol: points.length < 3,
-        symbolSize: 7,
-        lineStyle: { color, width: 2.5 },
-        itemStyle: { color },
+        type: 'candlestick',
+        name: 'Share price',
+        data: candles.map((value) => value ?? [null, null, null, null]),
+        barMaxWidth: 16,
+        itemStyle: {
+          color: chartColors.teal,
+          color0: chartColors.red,
+          borderColor: chartColors.teal,
+          borderColor0: chartColors.red,
+        },
       },
     ],
   }
-  const first = points.find((point) => point.value !== null)
-  const last = [...points].reverse().find((point) => point.value !== null)
+  const validCandles = candles.filter((value) => value !== null).length
   return (
     <>
       <div className="mb-3 flex flex-wrap justify-between gap-2 text-sm text-muted">
-        <span>
-          First: {number(first?.value ?? null)} {unit}
-        </span>
-        <span>
-          Last: {number(last?.value ?? null)} {unit}
-        </span>
+        <span>First close: {number(price.series[0]?.close ?? null, 0)} IDR</span>
+        <span>Last close: {number(price.series.at(-1)?.close ?? null, 0)} IDR</span>
       </div>
-      <Chart
-        option={option}
-        label={`${name}, ${unit}, ${date(first?.date ?? null)} to ${date(last?.date ?? null)}. First ${number(first?.value ?? null)}, last ${number(last?.value ?? null)}. Missing observations remain gaps.`}
-        height={180}
-      />
+      {validCandles ? (
+        <div
+          className="overflow-x-auto rounded-xl focus-visible:outline-2 focus-visible:outline-accent"
+          tabIndex={0}
+          role="region"
+          aria-label="Three-month share price chart"
+        >
+          <div className="min-w-[640px]">
+            <Chart
+              option={option}
+              label={`Three-month share price candlesticks, ${date(price.series[0]?.date ?? null)} to ${date(price.series.at(-1)?.date ?? null)}. Prices are in IDR. Missing OHLC observations remain gaps.`}
+              height={390}
+            />
+          </div>
+        </div>
+      ) : (
+        <EmptyTrend
+          title="OHLC price data unavailable"
+          message="Dated closes are available, but open, high, or low values are missing, so candlesticks cannot be shown."
+        />
+      )}
+      <p className="mt-3 text-sm text-muted">
+        {date(price.series[0].date)} – {date(price.series.at(-1)!.date)} · {validCandles} of{' '}
+        {price.series.length} OHLC observations.
+        {price.incomplete_history || price.status === 'partial' ? ' Partial price coverage.' : ''}
+        {price.status === 'stale' || price.sources.some((source) => source.is_stale)
+          ? ' Price update needed.'
+          : ''}
+      </p>
     </>
   )
 }
 
 export function Trends({ data }: { data: Research }) {
-  const [range, setRange] = useState<Range>('1m')
-  const { chartColors } = useChartTheme()
-  const priceRange = range === '3m' ? '3m' : '1m'
-  const query = useQuery({
-    queryKey: ['price-history', data.symbol, priceRange],
-    queryFn: ({ signal }) => getPriceHistory(data.symbol, priceRange, signal),
-    enabled: range !== '1y',
+  const priceQuery = useQuery({
+    queryKey: ['price-history', data.symbol, '3m'],
+    queryFn: ({ signal }) => getPriceHistory(data.symbol, '3m', signal),
   })
-  const prices = query.data?.series ?? []
-  // Foreign flow is only supplied for the aggregate's observed dates. Align gaps
-  // to those dates; never invent long-range totals or infer daily score history.
-  const cutoff = new Date(`${data.flow.effective_end ?? data.as_of}T00:00:00Z`)
-  cutoff.setUTCDate(cutoff.getUTCDate() - 29)
-  const foreign = data.flow.liquidity.series
-    .filter((point) => new Date(`${point.date}T00:00:00Z`) >= cutoff)
-    .map((point) => ({
-      date: point.date,
-      value:
-        data.flow.foreign_flow.series.find((item) => item.date === point.date)?.net_inflow_idr ??
-        null,
-    }))
-  const foreignCount = foreign.filter((point) => point.value !== null).length
-  const hasForeign = foreignCount >= 2
+  const prices = priceQuery.data?.series ?? []
   return (
     <section className={ui.panel} aria-labelledby="trends-title">
-      <div className={ui.sectionHeading}>
-        <div>
-          <h2 id="trends-title">Change over time</h2>
-          <p className="mt-2 text-sm text-muted">
-            Available observations, with their actual coverage dates.
+      <div>
+        <h2 id="trends-title">Change over time</h2>
+        <p className="mt-2 text-sm text-muted">
+          Three-month share-price history, with actual coverage dates.
+        </p>
+      </div>
+      <article aria-label="Share price trend" className="mt-6 min-w-0">
+        <h3 className="mb-4 text-lg">
+          Share price · 3M <span className="text-sm font-normal text-muted">IDR</span>
+        </h3>
+        {priceQuery.isPending ? (
+          <p className="min-h-40 py-10 text-sm text-muted" role="status">
+            Loading price history…
           </p>
-        </div>
-        <div
-          className="flex gap-1 rounded-xl border border-line bg-canvas p-1"
-          role="group"
-          aria-label="Trend period"
-        >
-          {(['1m', '3m', '1y'] as const).map((item) => {
-            const active = range === item
-            return (
-              <button
-                type="button"
-                className={`min-h-11 rounded-lg border px-4 text-sm font-semibold ${active ? 'border-period-active bg-period-active text-on-period-active' : 'border-control bg-surface text-ink hover:bg-raised'}`}
-                aria-pressed={active}
-                key={item}
-                onClick={() => setRange(item)}
-              >
-                {item.toUpperCase()}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-      <div className="grid gap-6 xl:grid-cols-3">
-        <article aria-label="Overall Score trend" className="min-w-0">
-          <h3 className="mb-4 text-lg">Overall Score</h3>
+        ) : priceQuery.isError ? (
           <EmptyTrend
-            title="Score history unavailable"
-            message="Only the current score is available. No prior-week or prior-month comparison can be shown."
+            title="Price history unavailable"
+            message="The three-month history could not be loaded. Other research remains available."
           />
-        </article>
-        <article aria-label="Share price trend" className="min-w-0">
-          <h3 className="mb-4 text-lg">
-            Share price <span className="text-sm font-normal text-muted">IDR</span>
-          </h3>
-          {range === '1y' ? (
-            <EmptyTrend
-              title="1Y price history unavailable"
-              message="Price history currently supports up to 3M. Select 1M or 3M for available closes."
-            />
-          ) : query.isPending ? (
-            <p className="min-h-40 py-10 text-sm text-muted" role="status">
-              Loading price history…
-            </p>
-          ) : query.isError ? (
-            <EmptyTrend
-              title="Price history unavailable"
-              message="The selected history could not be loaded. Other research remains available."
-            />
-          ) : prices.length < 2 ? (
-            <EmptyTrend
-              title="Not enough price observations"
-              message="At least two dated closes are needed to display a trend."
-            />
-          ) : (
-            <>
-              <MiniTrend
-                points={prices.map((point) => ({ date: point.date, value: point.close }))}
-                name="Share price"
-                unit="IDR"
-                color={chartColors.blue}
-              />
-              <p className="mt-3 text-sm text-muted">
-                {date(prices[0].date)} – {date(prices.at(-1)!.date)} · {prices.length} closes
-                {query.data?.incomplete_history || query.data?.status === 'partial'
-                  ? ' · Partial coverage'
-                  : ''}
-                {query.data?.status === 'stale' ||
-                query.data?.sources.some((source) => source.is_stale)
-                  ? ' · Update needed'
-                  : ''}
-              </p>
-            </>
-          )}
-        </article>
-        <article aria-label="Foreign flow trend" className="min-w-0">
-          <h3 className="mb-4 text-lg">
-            Daily foreign flow <span className="text-sm font-normal text-muted">IDR</span>
-          </h3>
-          {range !== '1m' ? (
-            <EmptyTrend
-              title={`${range.toUpperCase()} foreign-flow history unavailable`}
-              message={`The current research includes only ${data.flow.trading_days} trading observations. Longer history is not available.`}
-            />
-          ) : !hasForeign ? (
-            <EmptyTrend
-              title="Not enough foreign-flow observations"
-              message="At least two dated foreign-flow values are needed to display a trend."
-            />
-          ) : (
-            <>
-              <MiniTrend
-                points={foreign}
-                name="Daily foreign net flow"
-                unit="IDR"
-                color={chartColors.teal}
-              />
-              <p className="mt-3 text-sm text-muted">
-                {date(foreign[0].date)} – {date(foreign.at(-1)!.date)} · {foreignCount} available
-                observations. Available 1M subset; not a complete calendar-month history.
-              </p>
-            </>
-          )}
-        </article>
-      </div>
+        ) : prices.length < 2 ? (
+          <EmptyTrend
+            title="Not enough price observations"
+            message="At least two dated prices are needed to display a trend."
+          />
+        ) : (
+          <PriceChart price={priceQuery.data} />
+        )}
+      </article>
     </section>
   )
 }
