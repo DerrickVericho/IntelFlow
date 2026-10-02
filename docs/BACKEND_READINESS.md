@@ -20,8 +20,9 @@ IDX ticker still depends on available dated inputs.
 | Research key points | `key_points[]`, source references | Ready; deterministic synthesis, no LLM requirement |
 | Source freshness / missing states | `sources[]`, `missing_inputs[]`, `status` | Ready; cache fetch time separated from observation date |
 | Monthly shareholder stacked bars | `/shareholders` categories/holdings/totals/counts | Backend ready, optional frontend work |
-| Price/volume chart | `/price-history` OHLC and volume series | Fixed 3M OHLC consumed by the IntelScore Change over time chart; standalone Stockchart remains optional |
-| Default top 3 buyers/sellers and broker selector | `/broker-series` defaults, available/selected codes, series | Backend ready but not requested by the current IntelScore chart; future overlays must account for paid calls and 14-day provider chunks |
+| Price/volume chart | `/price-history` OHLC and volume series | Fixed 3M OHLC consumed by the IntelScore Change over time chart |
+| BrokerFlow overlaid chart, period rankings, daily popup | `/broker-flow?range=5d/1m/3m` prices, top buyers/sellers, cumulative net-share series, and days | Draft backend ready; latest 5/20/60 price sessions, provider-ranked period net IDR, and daily broker `nlot` in at most 14-calendar-day chunks; missing whole days stay explicit gaps and later lines resume over reported days |
+| Default top 3 buyers/sellers and broker selector | `/broker-series` defaults, available/selected codes, series | Existing selectable IDR series remains separate from the BrokerFlow top-five share-quantity chart |
 
 The initial IntelScore screen requests the aggregate research response and the
 fixed 3M price history. Flow tab changes request only `/flow`; quarterly/annual

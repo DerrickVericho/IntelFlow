@@ -33,11 +33,25 @@ hit:   Redis raw payload -> provider validation                  -> mapper
 | Free float | `FreeFloatRow` | symbol, company name, free-float ratio |
 | Revenue segments | `RevenueSegmentsResponse`, `SegmentEdge` | financial year, source, target, value |
 | Shareholders | `ShareholderResponse`, `ShareholderSnapshot` | date, totals, category holdings, shareholder counts |
+| BrokerFlow | `BrokerFlowResponse`, `BrokerFlowRank`, `BrokerFlowSeries`, `BrokerFlowDay` | aligned OHLC dates, period-ranked net IDR, cumulative signed net shares, daily top-five net-share quantities |
 | Company report | section-specific models | only requested sections and fields described below |
 
 The repeated list wrappers do not need separate business abstractions. A
 Pydantic `RootModel[list[...]]` may be used for flat array responses such as
 daily transactions and free float.
+
+BrokerFlow's public response preserves source dates and missing-input states.
+`excluded_price_dates[]` lists dated price rows within or after the selected
+period that lacked valid OHLC or positive volume and therefore have no chart
+slot. The selected `prices[]`, broker series, and `days[]` share only valid
+traded-candle dates; `effective_end` can precede the latest returned price row.
+`net_shares` is the daily provider `nlot` multiplied by 100; cumulative values
+are null for a missing whole-day broker summary, then resume as the sum over
+reported days. An absent broker within a returned daily summary has zero
+reported activity.
+Daily buyer/seller lists rank positive/negative `nlot` and display absolute
+share quantities. Period top-five lists remain ranked by the provider's
+aggregate `net_idr`.
 
 The Flow evidence contract keeps a 20-day `broker_summary` and independently
 ranked `broker_summary_5d`. Each keeps a dated `daily[]` row with

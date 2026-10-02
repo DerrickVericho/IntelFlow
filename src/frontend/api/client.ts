@@ -1,4 +1,6 @@
 import type {
+  BrokerFlowRange,
+  BrokerFlowResponse,
   BrokerSeriesResponse,
   FlowResponse,
   PriceResponse,
@@ -17,11 +19,11 @@ export class ApiError extends Error {
     super(message)
   }
 }
-async function get<T>(path: string, signal: AbortSignal): Promise<T> {
+async function get<T>(path: string, signal: AbortSignal, timeoutMs = 45_000): Promise<T> {
   let response: Response
   try {
     response = await fetch(`/api/v1/stocks/${path}`, {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(45_000)]),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]),
       headers: { Accept: 'application/json' },
     })
   } catch (error) {
@@ -133,6 +135,33 @@ export async function getBrokerSeries(symbol: string, range: '1m' | '3m', signal
       'INVALID_RESPONSE',
       'The backend returned unreadable or mismatched broker history.',
     )
+  }
+  return data
+}
+export async function getBrokerFlow(symbol: string, range: BrokerFlowRange, signal: AbortSignal) {
+  const data = await get<BrokerFlowResponse>(
+    `${encodeURIComponent(symbol)}/broker-flow?range=${range}`,
+    signal,
+    90_000,
+  )
+  if (
+    data.symbol !== symbol ||
+    data.range !== range ||
+    !Array.isArray(data.prices) ||
+    !Array.isArray(data.top_buyers) ||
+    !Array.isArray(data.top_sellers) ||
+    !Array.isArray(data.broker_series) ||
+    !Array.isArray(data.days) ||
+    data.prices.some((point) => !/^\d{4}-\d{2}-\d{2}$/.test(point.date)) ||
+    data.days.some((day) => !/^\d{4}-\d{2}-\d{2}$/.test(day.date)) ||
+    data.broker_series.some(
+      (series) =>
+        !/^[A-Z0-9]{2}$/.test(series.broker_code) ||
+        !Array.isArray(series.points) ||
+        series.points.length !== data.prices.length,
+    )
+  ) {
+    throw new ApiError(502, 'INVALID_RESPONSE', 'The backend returned mismatched BrokerFlow data.')
   }
   return data
 }

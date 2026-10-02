@@ -13,7 +13,7 @@ export function SymbolSearch({
   initial?: string
   large?: boolean
   compact?: boolean
-  destination?: 'intel-score' | 'shareholders'
+  destination?: 'intel-score' | 'shareholders' | 'broker-flow'
 }) {
   const [value, setValue] = useState(initial)
   const [error, setError] = useState(false)
@@ -34,13 +34,19 @@ export function SymbolSearch({
         navigate(
           destination === 'shareholders'
             ? `/shareholders/${symbol}`
-            : `/stocks/${symbol}/intel-score`,
+            : destination === 'broker-flow'
+              ? `/broker-flow/${symbol}`
+              : `/stocks/${symbol}/intel-score`,
         )
       }}
       noValidate
     >
       <label className="sr-only" htmlFor={id}>
-        {destination === 'shareholders' ? 'Shareholder IDX symbol' : 'IDX symbol'}
+        {destination === 'shareholders'
+          ? 'Shareholder IDX symbol'
+          : destination === 'broker-flow'
+            ? 'BrokerFlow IDX symbol'
+            : 'IDX symbol'}
       </label>
       <div
         className={`flex items-center gap-2 rounded-xl border border-control bg-surface p-1.5 pl-4 text-muted shadow-sm ${large ? 'flex-wrap sm:flex-nowrap sm:p-2 sm:pl-5' : ''}`}
@@ -63,12 +69,20 @@ export function SymbolSearch({
         <button
           className={`${compact ? ui.secondary : ui.primary} ${large ? 'w-full sm:w-auto' : 'px-3 py-2'}`}
           type="submit"
-          aria-label={destination === 'shareholders' ? 'Open Shareholders' : 'Open IntelScore'}
+          aria-label={
+            destination === 'shareholders'
+              ? 'Open Shareholders'
+              : destination === 'broker-flow'
+                ? 'Open BrokerFlow'
+                : 'Open IntelScore'
+          }
         >
           {large
             ? destination === 'shareholders'
               ? 'Explore Shareholders'
-              : 'Explore IntelScore'
+              : destination === 'broker-flow'
+                ? 'Explore BrokerFlow'
+                : 'Explore IntelScore'
             : 'Go'}
           <Icon name="arrow" size={16} />
         </button>

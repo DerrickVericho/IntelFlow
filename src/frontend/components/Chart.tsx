@@ -79,7 +79,7 @@ export function Chart({
 }: {
   option: ChartOption
   label: string
-  height?: number
+  height?: number | string
   onItemClick?: (index: number) => void
 }) {
   const element = useRef<HTMLDivElement>(null)

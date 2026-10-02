@@ -64,9 +64,11 @@ backend repeats validation before provider work.
   raw source identifiers are not shown in the UI.
 - Requests are cancellable. There is no automatic retry, polling, or focus and
   reconnect refetch, limiting surprise paid calls. Errors use plain-English recovery messages; internal request IDs remain in the API.
-- Navigation always shows Home, IntelScore and Shareholders. IntelScore and
-  Shareholders have separate symbol-search entries and routes; switching
+- Navigation always shows Home, IntelScore, Shareholders and BrokerFlow. Each
+  analysis section has its own symbol-search entry and route; switching
   sections does not carry the previous section's ticker or fetch its data.
+- The three analysis search entries share the same large input and content-width
+  alignment.
 - The Shareholders page loads monthly backend snapshots for a chosen year. Its
   stacked bar can switch between share counts and category composition percent,
   with independent All/Local/Foreign investor controls. The right panel retains
@@ -79,6 +81,18 @@ backend repeats validation before provider work.
   failure. Partial Flow and Overall Scores retain their numeric values when
   at least 16 of 20 foreign and volume observations are present; the coverage
   warning and Low confidence remain visible.
+
+- BrokerFlow uses `/broker-flow?range=5d/1m/3m` for a content-width chart with
+  overlaid price candlesticks and cumulative broker net-share lines on separate
+  axes. Clicking a chart item or choosing a trading date opens the daily top
+  five net buyer/seller share quantities. Horizontal rankings below use period
+  net IDR; a broker code in the legend or rankings highlights its line. The
+  ten lines have distinct colors in both themes; solid/dashed strokes indicate
+  the period buyer/seller ranking side. Ranges contain the latest 5, 20, or
+  60 valid traded price sessions. Excluded price-row dates and missing broker
+  summary dates are disclosed. If a whole broker-activity day is missing, the
+  chart shows a gap and its coverage count;
+  later cumulative values include reported days only.
 
 ## Appearance and evidence presentation
 

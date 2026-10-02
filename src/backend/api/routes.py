@@ -2,6 +2,7 @@
 
 from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, Request
+from ..schemas.broker_flow import BrokerFlowResponse
 from ..schemas.brokers import BrokerResponse
 from ..schemas.flow import FlowResponse
 from ..schemas.prices import PriceResponse
@@ -55,3 +56,12 @@ async def brokers(
     brokers: str | None = Query(None, max_length=29),
 ) -> BrokerResponse:
     return await service.brokers(symbol, range, brokers)
+
+
+@router.get("/{symbol}/broker-flow", response_model=BrokerFlowResponse)
+async def broker_flow(
+    symbol: str,
+    service: Service,
+    range: Literal["5d", "1m", "3m"] = Query(...),
+) -> BrokerFlowResponse:
+    return await service.broker_flow(symbol, range)
