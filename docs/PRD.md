@@ -87,9 +87,18 @@ receiving a buy/sell recommendation.
   detail, and a separate shareholder-count chart for its independently selected
   symbol. Historical years are selectable. Missing count fields do not hide
   available composition data.
-- Stockchart page with 1-week, 1-month, and 3-month ranges, price/volume data,
-  default top-three buyer and seller broker overlays, and user-selectable
-  brokers.
+- BrokerFlow page below Shareholders in navigation, with synchronized 5D, 1M,
+  and 3M ranges representing the latest 5, 20, and 60 observed price sessions
+  with a valid OHLC candle and positive reported volume. Dated price records
+  without either are excluded and disclosed. Stock OHLC candlesticks and
+  cumulative net-share lines for the period's top five net buyer and top five
+  net seller brokers overlap in
+  one chart area. Price uses the left axis; net share quantity uses the right
+  axis. The chart spans the content width and adjusts height to the viewport.
+  Selecting a trading date opens the daily top five net buyers and sellers by
+  share quantity. Two horizontal top-five net-IDR ranking charts sit below it.
+  Missing whole-day broker data is shown as a gap with affected dates disclosed;
+  later points sum the days that were reported.
 - Additional broker and foreign-flow timeline overlays.
 - Advanced shareholder-composition analysis and filters.
 - Revenue-segment visualization.
@@ -203,8 +212,9 @@ overlays. The empty Overall Score history panel and unsupported range controls
 are absent. Missing OHLC observations remain gaps; score calculations are not
 changed.
 
-Top-buyer/seller overlays and longer foreign-flow timelines are future
-improvements. Without a dedicated historical database they require additional
+Top-buyer/seller overlays on this IntelScore chart and longer foreign-flow
+timelines are future improvements. Without a dedicated historical database they
+require additional
 paid provider calls and careful date alignment. Broker daily activity accepts
 only a 14-calendar-day window per request, while top-broker selection and daily
 series retrieval have different response shapes. Foreign history also needs a

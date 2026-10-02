@@ -19,11 +19,19 @@ are accepted. Responses normalize to uppercase without suffix.
 | `/price-history` | Required `range=1w/1m/3m` | OHLC/volume series; effective dates and incomplete-history flag |
 | `/shareholders` | Optional `year`, defaults to current Jakarta year | Monthly holdings, category definitions, totals and counts |
 | `/broker-series` | Required `range=1w/1m/3m`; optional comma-separated `brokers` | Default and selected brokers, available codes, daily/cumulative flow series |
+| `/broker-flow` | Required `range=5d/1m/3m` | Aligned OHLC candles, period-ranked top five net buyers/sellers, cumulative net-share lines, and daily top five net buy/sell share quantities |
 
 Market chart ranges are trailing 7/30/90 calendar days inclusive, ending no
 later than the current UTC date. Before 07:00 WIB this is the previous Jakarta
 calendar date. Response `as_of` still comes from the latest observed trading
 date, not from the requested range end. Shareholder years use Jakarta time.
+BrokerFlow uses the latest 5/20/60 price sessions with valid OHLC and positive
+volume for `5d`/`1m`/`3m`. Dated price records that fail this chart criterion
+are listed in `excluded_price_dates` if they fall within or after the selected
+period. They do not extend broker lines or the broker ranking request window.
+Its ranking uses the actual first and last price observation dates in the
+selected period. `incomplete_history` means fewer price sessions were returned
+than the selected target.
 No endpoint calls a paid source for malformed query input. Home can navigate to
 IntelScore using the user's ticker without an extra search endpoint.
 
@@ -164,6 +172,16 @@ but is excluded from scoring. See scoring documentation for other guardrails.
 | Price history | `range, effective_start, effective_end, incomplete_history, series[]`; point: `date, open, high, low, close, volume, market_cap` (IDR prices, shares volume) |
 | Shareholders | `year, supported_years[], categories[{key,label}], series[]`; point: `date, shares_number, holdings{category: shares}, total_local, total_foreign, shareholder_count (nullable), shareholder_count_change (nullable)` |
 | Broker series | `range, effective_start, effective_end, incomplete_history, default_brokers[], selected_brokers[], available_brokers[], series[]`; series: `broker_code, points[]`; point: `date, buy_idr, sell_idr, net_idr, cumulative_net_idr` |
+| BrokerFlow | `range, effective_start, effective_end, incomplete_history, excluded_price_dates[], prices[], top_buyers[], top_sellers[], broker_series[], days[]`; price: `date, open, high, low, close, volume, market_cap`; rank: `rank, broker_code, net_idr`; broker series: `broker_code, side (buyer/seller), points[{date, net_shares, cumulative_net_shares}]`; day: `date, available, top_buyers[], top_sellers[]`, each daily item `broker_code, shares` |
+
+BrokerFlow period ranks come from the Sectors top endpoint by aggregate signed
+`net_idr`. Its dated lines and daily popup use the daily broker endpoint's
+signed `nlot × 100` shares. Daily buyer/seller lists rank positive/negative
+`nlot` independently and return absolute share quantities. A broker absent
+within a returned daily summary has zero reported activity. A missing whole
+day has `available=false`, empty daily lists, and null line points; later
+cumulative values resume over reported days only. These are broker codes and
+do not identify investor origin.
 
 Shareholder years are supported from 2021 to the current year; supported years
 are not a promise that a particular symbol has data in all those years.

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\candidate.json",
+    "sha256": "486e1b45d3b7855c947f99defded0d028fa51ccb14c391ca201914296a2b8363",
+    "bytes": 4254
+  },
+  "artifact": {
+    "path": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\intelflow-architecture-v2.html",
+    "sha256": "909d81b2c6404735e6133151e14ad31238d533375a33d1f59b94ef4e3cc14695",
+    "bytes": 760156
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\intelflow-architecture-v2.finalize.json",
+    "summaryReceipt": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\intelflow-architecture-v2.finalize-summary.json",
+    "browserCheckReceipt": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\intelflow-architecture-v2.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-02T03:38:17.074Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4862
+}

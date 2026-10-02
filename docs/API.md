@@ -434,6 +434,20 @@ top-3/top-5 consistency and concentration, alongside the separate ranked top
 broker endpoint. This adds one paid call per uncached chunk (normally two or
 three for 20 trading observations). Missing chunks remain gaps in score
 coverage; broker code or broker origin does not identify investor origin.
+BrokerFlow uses the same endpoint for up to three months of daily observations,
+partitioned into at most 14-calendar-day requests. It converts signed `nlot`
+to net shares at 100 shares per lot for cumulative lines; daily popup lists
+rank positive and negative `nlot` independently and show absolute shares.
+Its 5D/1M/3M controls select the latest 5/20/60 price sessions with positive
+volume and valid OHLC, and the request spans their actual first and last dates.
+Dated price rows without a drawable traded candle, including ones after the
+latest valid candle, are returned separately as `excluded_price_dates` and do
+not generate broker-line points. The API does not use a zero-volume or null-OHLC
+row as evidence of a formal exchange suspension. When a dated broker
+summary is returned but a ranked broker code is absent, IntelFlow treats that
+broker as having no reported activity on that day. A missing entire daily
+summary remains an explicit gap. Cumulative values after such a gap sum
+reported days only.
 
 #### Request
 
@@ -514,6 +528,10 @@ make each a distinct cached dataset. With `foreign=true`, the ranking follows
 `foreign_net_idr`; `net_idr` still describes all-investor net and must not be
 used as the foreign score's ranked balance. Shorter evidence tabs request only
 their selected `foreign=false` ranking.
+BrokerFlow makes a separate `foreign=false`, `cohort=all`, `origin=all`,
+`n_brokers=5` request for its effective price-date range. Its period rankings
+use `net_idr`; the cumulative chart lines use dated `nlot` from the daily
+broker endpoint.
 
 #### Request
 

@@ -180,6 +180,32 @@ export interface BrokerSeriesResponse extends Envelope {
     }[]
   }[]
 }
+export type BrokerFlowRange = '5d' | '1m' | '3m'
+export interface BrokerFlowResponse extends Envelope {
+  range: BrokerFlowRange
+  effective_start: string
+  effective_end: string
+  incomplete_history: boolean
+  excluded_price_dates: string[]
+  prices: PriceResponse['series']
+  top_buyers: { rank: number; broker_code: string; net_idr: number }[]
+  top_sellers: { rank: number; broker_code: string; net_idr: number }[]
+  broker_series: {
+    broker_code: string
+    side: 'buyer' | 'seller'
+    points: {
+      date: string
+      net_shares: number | null
+      cumulative_net_shares: number | null
+    }[]
+  }[]
+  days: {
+    date: string
+    available: boolean
+    top_buyers: { broker_code: string; shares: number }[]
+    top_sellers: { broker_code: string; shares: number }[]
+  }[]
+}
 export interface ShareholderPoint {
   date: string
   shares_number: number

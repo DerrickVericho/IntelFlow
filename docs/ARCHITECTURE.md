@@ -197,16 +197,21 @@ or provider transport modules.
 
 ### Initial backend workflow
 
-For a request such as `GET /api/v1/stocks/BBCA/broker-flow?window=5d`:
+For a request such as `GET /api/v1/stocks/BBCA/broker-flow?range=5d`:
 
-1. Route validates the symbol and window.
-2. Service converts `5d` into effective trading/date parameters.
-3. Service requests broker, foreign-flow, and liquidity inputs.
+1. Route validates the symbol and range.
+2. Service selects the last 5/20/60 observed price dates, then uses actual
+   first/last price dates for the ranking.
+3. Service requests period top brokers and daily broker activity in at most
+   14-calendar-day chunks.
 4. A cached Sectors gateway checks the cache before delegating a paid request
    to the HTTP client.
 5. Raw responses are normalized into internal records.
-6. Broker scoring functions calculate components and evidence.
-7. Route returns a stable JSON response to the frontend.
+6. The service aligns daily net-lot quantities with price dates and converts
+   them to shares. A missing broker in a reported daily summary counts as zero
+   activity; a missing whole day creates a gap. Subsequent cumulative totals
+   sum reported days only.
+7. Route returns a stable chart response without calculating scores.
 
 ## Backend HTTP contract
 
@@ -221,6 +226,7 @@ mirror Sectors paths one-for-one. The first contract is:
 | `GET /api/v1/stocks/{symbol}/shareholders?year=YYYY` | Nice-to-have shareholder chart data |
 | `GET /api/v1/stocks/{symbol}/price-history?range=1w\|1m\|3m` | Nice-to-have price/volume series |
 | `GET /api/v1/stocks/{symbol}/broker-series?range=1w\|1m\|3m&brokers=YP,BK` | Nice-to-have selectable broker series |
+| `GET /api/v1/stocks/{symbol}/broker-flow?range=5d\|1m\|3m` | Overlaid OHLC and broker net-share series, period ranks and daily top-five quantities |
 
 The concise living client contract lives in `src/backend/API_CONTRACT.md`.
 Detailed frontend field requirements, call triggers, and Sectors input mapping
@@ -285,7 +291,7 @@ src/frontend/
 │   ├── HomePage
 │   ├── IntelScorePage
 │   ├── ShareholderCompositionPage
-│   └── StockchartPage
+│   └── BrokerFlowPage
 ├── features/
 │   ├── symbol-search/
 │   ├── scores/
@@ -307,14 +313,20 @@ src/frontend/
    Combined Score, key points, charts, evidence, and data dates.
 3. **Shareholder Composition — nice to have** renders monthly stacked
    composition and shareholder-count changes.
-4. **Stockchart — nice to have** renders 1-week, 1-month, or 3-month
-   price/volume data with default top-three buyer/seller brokers and optional
-   user-selected broker overlays.
+4. **BrokerFlow — implemented draft** shows synchronized 5D, 1M, or 3M stock OHLC
+   candlesticks and cumulative daily net-share lines for each period's
+   independently ranked top-five buyer and seller brokers overlaid in one
+   chart area. Price uses the left axis and share quantity the right axis;
+   horizontal net-IDR rankings follow below. The browser
+   consumes a backend contract; the backend combines the Sectors top-broker
+   ranking with daily broker activity retrieved in at most 14-calendar-day
+   chunks. Its full-width chart opens a dated top-five buyer/seller net-share
+   dialog when a date is selected. The page does not recalculate scores.
 
 ### Frontend data rules
 
 - The selected symbol should live in the URL so pages can be bookmarked, for
-  example `/stocks/BBCA/broker-flow`.
+  example `/broker-flow/BBCA`.
 - Page components call functions from `api/`; they do not call Sectors.
 - Components render backend values and do not recreate score formulas.
 - Loading, invalid-symbol, upstream-error, and unavailable-data states must be
@@ -469,5 +481,5 @@ scoring code.
 5. **Frontend integration:** connect IntelScore to the backend, implement charts
    and key points, and verify responsive, loading, stale, partial, and error
    states.
-6. **Refinement:** add Shareholder Composition and Stockchart only if the MVP is
-   reliable, then consider AI/news research and other enhancements.
+6. **Refinement:** Shareholder Composition and BrokerFlow are implemented as
+   separate pages; future work can consider AI/news research and other enhancements.

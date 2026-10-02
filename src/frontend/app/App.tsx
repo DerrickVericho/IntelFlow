@@ -16,12 +16,16 @@ import { SymbolSearch } from '../components/SymbolSearch'
 import { ThemeControl } from '../components/ThemeControl'
 import { ui } from '../components/ui'
 import { ShareholdersSearchPage } from '../pages/ShareholdersSearchPage'
+import { BrokerFlowSearchPage } from '../pages/BrokerFlowSearchPage'
 
 const IntelScorePage = lazy(() =>
   import('../pages/IntelScorePage').then((module) => ({ default: module.IntelScorePage })),
 )
 const ShareholdersPage = lazy(() =>
   import('../pages/ShareholdersPage').then((module) => ({ default: module.ShareholdersPage })),
+)
+const BrokerFlowPage = lazy(() =>
+  import('../pages/BrokerFlowPage').then((module) => ({ default: module.BrokerFlowPage })),
 )
 function LegacyShareholdersRedirect() {
   const { symbol = '' } = useParams()
@@ -52,10 +56,16 @@ function Shell() {
   const scoreMatch = useMatch('/stocks/:symbol/intel-score')
   const shareholderMatch = useMatch('/shareholders/:symbol')
   const shareholderEntry = useMatch('/shareholders')
+  const scoreEntry = useMatch('/intel-score')
+  const brokerMatch = useMatch('/broker-flow/:symbol')
+  const brokerEntry = useMatch('/broker-flow')
   const scoreSymbol = scoreMatch?.params.symbol
   const shareholderSymbol = shareholderMatch?.params.symbol
-  const symbol = scoreSymbol ?? shareholderSymbol
+  const brokerSymbol = brokerMatch?.params.symbol
+  const symbol = scoreSymbol ?? shareholderSymbol ?? brokerSymbol
   const inShareholders = !!shareholderMatch || !!shareholderEntry
+  const inBrokerFlow = !!brokerMatch || !!brokerEntry
+  const wideContent = inBrokerFlow || !!shareholderEntry || !!scoreEntry
   const location = useLocation()
   const main = useRef<HTMLElement>(null)
   const previousPath = useRef(location.pathname)
@@ -118,6 +128,13 @@ function Shell() {
             <Icon name="people" />
             Shareholders
           </NavLink>
+          <NavLink
+            to={brokerSymbol ? `/broker-flow/${brokerSymbol}` : '/broker-flow'}
+            className={({ isActive }) => navClass(isActive || inBrokerFlow)}
+          >
+            <Icon name="flow" />
+            BrokerFlow
+          </NavLink>
         </nav>
         <div className="mt-auto hidden px-4 pt-8 text-xs text-muted md:block">
           <p>Indonesia Stock Exchange</p>
@@ -131,15 +148,22 @@ function Shell() {
             <strong className="font-medium text-ink">
               {location.pathname === '/'
                 ? 'Overview'
-                : (symbol ?? (inShareholders ? 'Shareholders' : 'Company research'))}
+                : (symbol ??
+                  (inShareholders
+                    ? 'Shareholders'
+                    : inBrokerFlow
+                      ? 'BrokerFlow'
+                      : 'Company research'))}
             </strong>
           </span>
           <div className="flex w-full min-w-0 items-center gap-3 xl:w-auto">
             {symbol && (
               <SymbolSearch
-                key={`${inShareholders ? 'shareholders' : 'score'}-${symbol}`}
+                key={`${inShareholders ? 'shareholders' : inBrokerFlow ? 'broker-flow' : 'score'}-${symbol}`}
                 initial={symbol}
-                destination={inShareholders ? 'shareholders' : 'intel-score'}
+                destination={
+                  inShareholders ? 'shareholders' : inBrokerFlow ? 'broker-flow' : 'intel-score'
+                }
                 compact
               />
             )}
@@ -150,7 +174,7 @@ function Shell() {
           ref={main}
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-[1480px] min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8 lg:px-10"
+          className={`mx-auto w-full min-w-0 flex-1 px-4 py-6 sm:py-8 ${wideContent ? 'max-w-none sm:px-6 lg:px-8' : 'max-w-[1480px] sm:px-8 lg:px-10'}`}
         >
           <Boundary key={location.pathname}>
             <Suspense fallback={<Loading text="Opening research workspace…" />}>
@@ -178,6 +202,8 @@ export function App() {
         <Route path="stocks/:symbol/intel-score" element={<IntelScorePage />} />
         <Route path="shareholders" element={<ShareholdersSearchPage />} />
         <Route path="shareholders/:symbol" element={<ShareholdersPage />} />
+        <Route path="broker-flow" element={<BrokerFlowSearchPage />} />
+        <Route path="broker-flow/:symbol" element={<BrokerFlowPage />} />
         <Route path="stocks/:symbol/shareholders" element={<LegacyShareholdersRedirect />} />
         <Route
           path="*"

@@ -19,7 +19,7 @@ on color alone. Product copy, code, tests and documentation are English.
 
 The frontend-design skill informs the shared visual system. The taste skill
 informs Home and the redesign audit; its marketing patterns are not applied to
-data-heavy research. Home, IntelScore, and Shareholders have usable navigation.
+data-heavy research. Home, IntelScore, Shareholders, and BrokerFlow have usable navigation.
 
 ## Appearance
 
@@ -52,6 +52,11 @@ data-heavy research. Home, IntelScore, and Shareholders have usable navigation.
 - `/shareholders`: independent shareholder symbol search entry.
 - `/shareholders/:symbol`: monthly shareholder composition and count. The old
   `/stocks/:symbol/shareholders` URL redirects here.
+- `/broker-flow`: independent BrokerFlow symbol search, directly below
+  Shareholders in navigation.
+- `/broker-flow/:symbol`: BrokerFlow chart and broker rankings.
+- IntelScore, Shareholders, and BrokerFlow search entries share the same
+  content-width placement, left inset, and large ticker input width.
 - `?window=1d` and `?window=5d` select flow evidence. Omission means 20D.
   Back/forward restores the period; unsupported values explicitly fall back.
 - Home performs no market request before ticker submission or opening the example.
@@ -87,6 +92,52 @@ data-heavy research. Home, IntelScore, and Shareholders have usable navigation.
   shareholder-data error. Both charts and controls use theme-aware,
   high-contrast labels. Internal field names, request identifiers, retrieval
   diagnostics, provider errors and credentials never appear in the UI.
+
+## BrokerFlow page (implemented draft)
+
+- Show one large chart spanning the available content width in which stock OHLC candlesticks and
+  cumulative broker-net share lines overlap on the same dates. Label the left
+  axis stock price in IDR per share and the right axis signed cumulative net
+  share quantity. A shared date guide supports direct comparison. Below the
+  frame, show side-by-side horizontal rankings for the top five net buyers and
+  top five net sellers. On narrow screens the rankings stack. Do not add
+  summary cards or broker-detail panels.
+- The chart height responds to viewport height, within 440–720 px. Selecting
+  a candle or broker line opens a dialog for that trading date. A date picker
+  provides the same interaction for keyboard and touch use. The dialog shows
+  each day's five largest positive and five largest negative net-lot brokers,
+  expressed as absolute share quantities, with an unavailable state when the
+  dated broker summary is missing.
+- One 5D / 1M / 3M period control changes all three sections together. The
+  periods use the latest 5, 20, or 60 observed price sessions with valid OHLC
+  and positive volume; display the actual dates and coverage
+  returned. Disclose dates of provider price rows excluded for invalid OHLC or
+  zero volume, including rows after the latest plotted session. Candles use
+  dated open, high, low, and close values rather than a derived price-change
+  bar measure.
+- Select the five buyers and five sellers independently by their aggregate
+  net IDR over the chosen period using the documented Sectors top-broker
+  endpoint. The horizontal charts show signed net IDR, with a shared magnitude
+  scale. Aligned buyer and seller ranks do not imply transactions between them.
+- The lines plot cumulative daily net shares of those selected brokers using
+  the daily broker activity `nlot` field converted at
+  [100 shares per lot](https://rdis.idx.co.id/id/events/kenapa-harus-faham-istilah-saham). The
+  top-five selection and horizontal rankings remain based on aggregate net
+  IDR; make this difference in measure clear in the chart labels. Use the
+  reported `nlot` sign for each line even when it differs from that broker's
+  net-IDR ranking side.
+  Broker codes remain identifiable in a legend, and selecting a code highlights
+  its line. Use ten distinct broker colors in both themes instead of five
+  green and five red shades; solid lines identify period net buyers, dashed
+  lines identify period net sellers. The top-broker response supplies rankings,
+  not daily points; the daily broker activity endpoint requires requests in windows of at most 14
+  calendar days. A broker absent from a returned daily summary has zero
+  reported activity. An entire missing daily summary remains a gap; later
+  cumulative values resume using only observed days, with visible coverage
+  disclosure that names the affected dates. Never invent activity for an unreported date.
+- This page describes broker activity, not investor origin. It does not alter
+  Flow Score, Fundamental Score, or Combined Score. Source and actual period
+  coverage remain visible without additional summary or detail sections.
 
 ## Company market header
 

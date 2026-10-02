@@ -28,6 +28,7 @@ IntelFlow is built for research and education. It does not place trades, predict
 
 - **IntelScore:** Search a four-letter IDX symbol (an optional `.JK` suffix is accepted), then inspect the three scores, their drivers, and concise research insights.
 - **Flow activity:** Compare 1-day, 5-day, and 20-day broker evidence, including leading buyers and sellers, foreign net flow, and liquidity context.
+- **BrokerFlow:** Search a ticker independently, then compare price candlesticks with cumulative net-share lines for the period's leading brokers across 5D, 1M, or 3M. Inspect a trading day for its top net buyers and sellers by share quantity, or compare the period's top five on each side by net IDR.
 - **Investor-origin views:** Switch between All, Foreign, and Local views where supported. Broker identity and investor origin are distinct; a broker code does not identify the underlying investor.
 - **Fundamentals:** Review growth, earnings quality, cash-flow quality, and valuation evidence next to the flow analysis.
 - **Market context:** View a fixed three-month price candlestick chart alongside the selected company's dated close and volume context.
@@ -51,6 +52,12 @@ Company context, data availability, and the separate Overall and Flow scores.
 Broker accumulation and distribution over the selected 20-day window, with investor-origin controls and ranked net activity.
 
 [![IntelFlow Flow activity for BBCA, showing broker bars and net activity table](static/flow-activity-page.png)](static/flow-activity-page.png)
+
+### BrokerFlow
+
+Price candlesticks and cumulative broker net-share lines for BBCA over the selected 5D range. The chart supports daily broker-quantity inspection; the rankings below compare period net IDR.
+
+[![IntelFlow BrokerFlow for BBCA, showing price candlesticks, broker-flow lines, and top net buyer and seller rankings](static/broker-activity.png)](static/broker-activity.png)
 
 ### Shareholder composition
 
@@ -79,17 +86,9 @@ Scores range from 0 to 100. A missing input is treated as unavailable, not as ze
 | Delivery          | Docker Compose, uv, npm                                             | Local stack and dependency management                                      |
 | Verification      | pytest, Vitest, Testing Library, Playwright                         | Backend, component, and browser checks                                     |
 
-```mermaid
-flowchart LR
-    User[Researcher] --> UI[React frontend]
-    UI --> API[FastAPI backend]
-    API --> Cache[(Redis cache)]
-    Cache -->|Cache miss| Sectors[Sectors API v2]
-    Sectors --> API
-    Cache --> API
-    API --> Score[Normalize and score]
-    Score --> UI
-```
+[![IntelFlow architecture: researcher, React frontend, FastAPI routes, research services, Sectors gateway, Redis cache, scoring engine, and Sectors API](static/intelflow-architecture.svg)](static/intelflow-architecture.svg)
+
+[Explore the interactive architecture diagram](.archify/architecture-intelflow-20261002-213714/intelflow-architecture-v2.html) (open the HTML locally after cloning the repository).
 
 The API key stays on the backend. Redis reduces repeat upstream requests and API-credit usage. The frontend receives normalized data and score evidence through IntelFlow's own API; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the boundaries in detail.
 
@@ -173,6 +172,6 @@ Further reading: [product requirements](docs/PRD.md) · [scoring specification](
 
 ## Scope and license
 
-IntelFlow currently focuses on research for a selected symbol. Historical score snapshots, a standalone broker-overlay stock chart, AI-written research, and cited news research are future work described in the [product brief](docs/PRD.md). The exported PDF is a visual capture of the displayed page, so its text is not selectable.
+IntelFlow currently focuses on research for a selected symbol. Historical score snapshots, additional flow timeline overlays, AI-written research, and cited news research are future work described in the [product brief](docs/PRD.md). The exported PDF is a visual capture of the displayed IntelScore page, so its text is not selectable.
 
 This project is licensed under the [MIT License](LICENSE). Market information is provided for research and education, **not financial advice**.
