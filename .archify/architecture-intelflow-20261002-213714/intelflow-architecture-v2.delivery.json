@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "a28a5c7c-c72c-4c7d-976e-969bddfaa883",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\candidate.json",
+  "output": "C:\\1. MLDL Project\\[Learn] RAG Agentic AI\\SectorHackthon\\.archify\\architecture-intelflow-20261002-213714\\intelflow-architecture-v2.html",
+  "specification": {
+    "sha256": "486e1b45d3b7855c947f99defded0d028fa51ccb14c391ca201914296a2b8363",
+    "bytes": 4254
+  },
+  "artifact": {
+    "sha256": "909d81b2c6404735e6133151e14ad31238d533375a33d1f59b94ef4e3cc14695",
+    "bytes": 760156
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "IntelFlow system architecture",
+    "locale": "en",
+    "output": ".archify/architecture-intelflow-20261002-213714/intelflow-architecture-v2.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/DerrickVericho/IntelFlow.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "371b4313811074d97e1d6a1a5dfcb1fad8afa1e0"
+    }
+  },
+  "components": [
+    {
+      "id": "researcher",
+      "type": "external",
+      "label": "Researcher",
+      "sublabel": "selects an IDX ticker",
+      "pos": [40, 90],
+      "size": [160, 68],
+      "sources": [{ "path": "src/frontend/pages/HomePage.tsx", "line": 25, "end_line": 43 }]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React frontend",
+      "sublabel": "routes, charts, PDF export",
+      "pos": [290, 90],
+      "size": [180, 68],
+      "sources": [
+        { "path": "src/frontend/app/App.tsx", "line": 197, "end_line": 207 },
+        { "path": "src/frontend/api/client.ts", "line": 18, "end_line": 51 }
+      ]
+    },
+    {
+      "id": "routes",
+      "type": "backend",
+      "label": "FastAPI routes",
+      "sublabel": "typed research responses",
+      "pos": [570, 90],
+      "size": [180, 68],
+      "sources": [{ "path": "src/backend/api/routes.py", "line": 13, "end_line": 65 }]
+    },
+    {
+      "id": "services",
+      "type": "backend",
+      "label": "Research services",
+      "sublabel": "normalize and assemble",
+      "pos": [850, 90],
+      "size": [180, 68],
+      "sources": [
+        { "path": "src/backend/services/research.py", "line": 1, "end_line": 17 },
+        { "path": "src/backend/services/intel_score.py", "line": 12, "end_line": 60 }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "Sectors gateway",
+      "sublabel": "validate; cache first",
+      "pos": [1130, 90],
+      "size": [180, 68],
+      "sources": [{ "path": "src/backend/sectors/cached.py", "line": 45, "end_line": 129 }]
+    },
+    {
+      "id": "sectors",
+      "type": "external",
+      "label": "Sectors API v2",
+      "sublabel": "market and company data",
+      "pos": [1410, 90],
+      "size": [180, 68],
+      "sources": [{ "path": "src/backend/sectors/client.py", "line": 28, "end_line": 50 }]
+    },
+    {
+      "id": "scoring",
+      "type": "backend",
+      "label": "Scoring engine",
+      "sublabel": "Flow + Fundamental + Overall",
+      "pos": [850, 310],
+      "size": [180, 68],
+      "sources": [{ "path": "src/backend/scoring/research.py", "line": 15, "end_line": 62 }]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis cache",
+      "sublabel": "provider payloads + TTL",
+      "pos": [1130, 310],
+      "size": [180, 68],
+      "sources": [
+        { "path": "src/backend/cache/store.py", "line": 17, "end_line": 37 },
+        { "path": "src/backend/sectors/cached.py", "line": 80, "end_line": 122 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "open", "from": "researcher", "to": "frontend", "label": "search ticker", "variant": "emphasis" },
+    { "id": "request", "from": "frontend", "to": "routes", "label": "GET /api/v1", "variant": "emphasis" },
+    { "id": "dispatch", "from": "routes", "to": "services", "label": "dispatch" },
+    { "id": "provider-data", "from": "services", "to": "gateway", "label": "request data" },
+    { "id": "upstream", "from": "gateway", "to": "sectors", "label": "cache miss", "variant": "dashed" },
+    { "id": "calculate", "from": "services", "to": "scoring", "label": "score evidence" },
+    { "id": "cache", "from": "gateway", "to": "redis", "label": "read / write" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Client boundary",
+      "items": [
+        "The browser calls IntelFlow's same-origin API and renders backend values.",
+        "The Sectors API key is held by the backend only."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Data and scoring",
+      "items": [
+        "Redis serves validated provider payloads when a key is cached.",
+        "Services return dated evidence; the scoring engine computes scores deterministically."
+      ]
+    }
+  ]
+}
